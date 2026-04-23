@@ -1,0 +1,69 @@
+{
+  "name": "@dreamxist/bal-cli",
+  "version": "0.1.2",
+  "description": "Opinionated CLI for personal finance management. Every peso located, every peso explained. Bring Your Own Supabase.",
+  "type": "module",
+  "bin": {
+    "bal": "dist/index.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsup",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "echo 'no lint yet'",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "cli",
+    "finance",
+    "personal-finance",
+    "supabase",
+    "balance",
+    "budgeting",
+    "expenses",
+    "self-hosted"
+  ],
+  "author": {
+    "name": "Francisco Zúñiga Palma",
+    "url": "https://github.com/dreamxist"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/dreamxist/balance#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dreamxist/balance.git",
+    "directory": "apps/cli"
+  },
+  "bugs": {
+    "url": "https://github.com/dreamxist/balance/issues"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.0",
+    "@types/figlet": "^1.7.0",
+    "commander": "^13.1.0",
+    "figlet": "^1.11.0",
+    "picocolors": "^1.1.1"
+  },
+  "devDependencies": {
+    "@balance/core": "*",
+    "tsup": "^8.5.1",
+    "tsx": "^4.19.0",
+    "typescript": "^5.8.0",
+    "vitest": "^4.1.2"
+  }
+}

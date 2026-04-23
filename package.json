@@ -1,0 +1,27 @@
+{
+  "name": "balance-app",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "turbo dev",
+    "dev:web": "turbo dev --filter=@balance/web",
+    "dev:cli": "turbo dev --filter=@balance/cli",
+    "build": "turbo build",
+    "test": "turbo test",
+    "test:engine": "cd tests && npx vitest run",
+    "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
+    "db:start": "supabase start",
+    "db:stop": "supabase stop",
+    "db:reset": "supabase db reset",
+    "db:types": "supabase gen types typescript --local > packages/core/src/types.ts"
+  },
+  "packageManager": "npm@10.9.2",
+  "devDependencies": {
+    "turbo": "^2.6.0",
+    "typescript": "^5.8.0"
+  }
+}

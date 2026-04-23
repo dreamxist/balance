@@ -1,0 +1,23 @@
+node_modules/
+dist/
+.DS_Store
+*.log
+.env
+.env.local
+.env.production
+.mcp.json
+
+# Supabase local
+supabase/.temp/
+supabase/.branches/
+
+# Turbo
+.turbo/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+Thumbs.db
+.vercel

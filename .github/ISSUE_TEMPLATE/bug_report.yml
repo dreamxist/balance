@@ -1,0 +1,49 @@
+name: Bug report
+description: Something in Balance behaves unexpectedly
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! Balance is maintained solo, so the more specific your report, the faster it gets looked at.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe the bug. Include CLI output, screenshots, or reproduction steps.
+      placeholder: I ran `bal balance` and got ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Output of `bal --version` (or commit SHA if running from source).
+      placeholder: "0.1.1"
+    validations:
+      required: true
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Where
+      options:
+        - CLI (`bal`)
+        - Web app
+        - Database / migrations
+        - Edge Functions
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: env
+    attributes:
+      label: Environment
+      description: "OS, Node version, Supabase project region. Output of `node --version` helps."
+    validations:
+      required: false

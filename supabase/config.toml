@@ -1,0 +1,26 @@
+project_id = "balance-app"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public"]
+
+[db]
+port = 54322
+major_version = 17
+
+[studio]
+enabled = true
+port = 54323
+
+[auth]
+enabled = true
+site_url = "http://localhost:5173"
+additional_redirect_urls = ["http://localhost:5173"]
+
+[auth.email]
+enable_signup = true
+enable_confirmations = false
+
+# Edge functions enabled via Supabase dashboard
+# Cron for daily-charges configured via Supabase dashboard (pg_cron)
