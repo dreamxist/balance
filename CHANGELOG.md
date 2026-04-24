@@ -6,6 +6,29 @@ All notable changes to Balance are documented here. Format based on
 
 ## [Unreleased]
 
+## [0.2.1] — 2026-04-24
+
+### Added
+
+- **`@dreamxist/bal-cli`** — 11 new command groups covering the full webapp surface:
+  - `bal transfer <amount> --from --to` — move money between accounts (does not affect accumulated).
+  - `bal undo <tx-id>` — reverse a transaction via compensating adjustment (immutable ledger).
+  - `bal account {list,create,archive,rename,balance}` — full account CRUD + manual balance override for off-budget accounts.
+  - `bal debt {list,create,pay,payoff,archive}` — installment purchase flows with fuzzy match by description.
+  - `bal receivable pay <receivable> <amount> --to <account>` — record a payment received from a receivable.
+  - `bal category {list,create,rename,delete}` — category tree management.
+  - `bal recurring {list,create,delete}` — recurring charges (auto-executed by the `daily-charges` cron).
+  - `bal snapshot {create,list}` — capture and browse patrimony snapshots.
+  - `bal export [--format json|csv] [--output]` — full dataset export.
+  - `bal fintual sync [--dry-run]` — pull Fintual fund prices and update off-budget balances.
+  - `bal spa {dashboard, invoice {list,create,pay}, f29, annual}` — business entity (SpA) operations.
+- **`bal list` filters** — multi-type (`--type income,expense`), text search (`--search`), custom date range (`--date-from/--date-to`), and new periods (`quarter`, `year`, `all`).
+- **Smoke test script** (`scripts/smoke.mjs`, `npm run smoke`) — read-only end-to-end validation of 13 commands against a live backend.
+
+### Fixed
+
+- Robust metadata parsing in `bal fintual sync` — JSONB columns sometimes come back as strings; parses both forms.
+
 ## [0.1.1] — 2026-04-23
 
 ### Fixed
