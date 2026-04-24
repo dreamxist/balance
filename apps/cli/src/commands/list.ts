@@ -1,16 +1,25 @@
 import type { Command } from 'commander'
 import { getAuthedClient } from '../lib/client'
 import { fail } from '../lib/exit'
-import { formatCLP } from '../lib/format'
-import { isPeriod, periodRange, VALID_PERIODS } from '../lib/period'
+import { formatCLP, padLeft, padRight } from '../lib/format'
+import { isIsoDate, isPeriod, periodRange, VALID_PERIODS } from '../lib/period'
 import { resolveAccountId } from '../lib/resolve'
-import { blank, headerLine, indent, pad, ui } from '../lib/ui'
 
 const VALID_TX_TYPES = ['income', 'expense', 'refund', 'transfer', 'debt_payment', 'adjustment'] as const
 type TxTypeFilter = (typeof VALID_TX_TYPES)[number]
 
 function isTxTypeFilter(value: string): value is TxTypeFilter {
   return (VALID_TX_TYPES as readonly string[]).includes(value)
+}
+
+export function parseTypeList(raw: string): TxTypeFilter[] {
+  const parts = raw.split(',').map((p) => p.trim()).filter(Boolean)
+  if (parts.length === 0) throw new Error(`invalid --type: ${raw}`)
+  const invalid = parts.filter((p) => !isTxTypeFilter(p))
+  if (invalid.length > 0) {
+    throw new Error(`invalid --type values: ${invalid.join(', ')}. One of: ${VALID_TX_TYPES.join(', ')}`)
+  }
+  return parts as TxTypeFilter[]
 }
 
 export function formatSignedAmount(type: string, amount: number): string {
@@ -26,17 +35,14 @@ export function formatSignedAmount(type: string, amount: number): string {
   return `${sign}${formatCLP(abs)}`
 }
 
-function colorForType(type: string): (s: string) => string {
-  if (type === 'expense' || type === 'debt_payment') return ui.negative
-  if (type === 'income' || type === 'refund') return ui.positive
-  return ui.muted
-}
-
 interface ListOptions {
   period: string
   category?: string
   account?: string
   type?: string
+  search?: string
+  dateFrom?: string
+  dateTo?: string
   limit: string
   json?: boolean
 }
@@ -48,35 +54,71 @@ export function registerListCommand(program: Command): void {
     .option('--period <period>', `one of: ${VALID_PERIODS.join(', ')}`, 'week')
     .option('--category <text>', 'filter by category prefix')
     .option('--account <name|id>', 'filter by account')
-    .option('--type <type>', `one of: ${VALID_TX_TYPES.join(', ')}`)
+    .option('--type <types>', `comma-separated, any of: ${VALID_TX_TYPES.join(', ')}`)
+    .option('--search <text>', 'filter by description (case-insensitive contains)')
+    .option('--date-from <YYYY-MM-DD>', 'custom start date (overrides --period)')
+    .option('--date-to <YYYY-MM-DD>', 'custom end date inclusive (overrides --period)')
     .option('--limit <n>', 'max rows', '100')
     .option('--json', 'output JSON')
     .action(async (opts: ListOptions) => {
-      if (!isPeriod(opts.period)) {
+      const usingCustomRange = Boolean(opts.dateFrom || opts.dateTo)
+      if (!usingCustomRange && !isPeriod(opts.period)) {
         fail(`invalid --period: ${opts.period}. One of: ${VALID_PERIODS.join(', ')}`)
       }
-      if (opts.type && !isTxTypeFilter(opts.type)) {
-        fail(`invalid --type: ${opts.type}. One of: ${VALID_TX_TYPES.join(', ')}`)
+      if (opts.dateFrom && !isIsoDate(opts.dateFrom)) {
+        fail(`invalid --date-from: ${opts.dateFrom}. Expected YYYY-MM-DD`)
       }
+      if (opts.dateTo && !isIsoDate(opts.dateTo)) {
+        fail(`invalid --date-to: ${opts.dateTo}. Expected YYYY-MM-DD`)
+      }
+
+      let types: TxTypeFilter[] | undefined
+      if (opts.type) {
+        try {
+          types = parseTypeList(opts.type)
+        } catch (err) {
+          fail((err as Error).message)
+        }
+      }
+
       const limit = Number.parseInt(opts.limit, 10)
       if (!Number.isFinite(limit) || limit <= 0) fail(`invalid --limit: ${opts.limit}`)
 
       const client = await getAuthedClient()
       const accountId = opts.account ? await resolveAccountId(client, opts.account) : undefined
-      const range = periodRange(opts.period)
+
+      let start: string
+      let endExclusive: string
+      if (usingCustomRange) {
+        start = opts.dateFrom ?? '1970-01-01'
+        if (opts.dateTo) {
+          const d = new Date(opts.dateTo)
+          d.setDate(d.getDate() + 1)
+          endExclusive = d.toISOString().slice(0, 10)
+        } else {
+          const d = new Date()
+          d.setDate(d.getDate() + 1)
+          endExclusive = d.toISOString().slice(0, 10)
+        }
+      } else {
+        const range = periodRange(opts.period as Parameters<typeof periodRange>[0])
+        start = range.start
+        endExclusive = range.endExclusive
+      }
 
       let query = client
         .from('transactions')
         .select('*')
-        .gte('date', range.start)
-        .lt('date', range.endExclusive)
+        .gte('date', start)
+        .lt('date', endExclusive)
         .order('date', { ascending: false })
         .order('created_at', { ascending: false })
         .limit(limit)
 
       if (accountId) query = query.eq('account_id', accountId)
       if (opts.category) query = query.ilike('category', `${opts.category}%`)
-      if (opts.type && isTxTypeFilter(opts.type)) query = query.eq('type', opts.type)
+      if (types && types.length > 0) query = query.in('type', types)
+      if (opts.search) query = query.ilike('description', `%${opts.search}%`)
 
       const { data, error } = await query
       if (error) throw error
@@ -87,34 +129,24 @@ export function registerListCommand(program: Command): void {
         return
       }
 
-      const lines: string[] = []
-      const meta = `${opts.period} · ${rows.length} result${rows.length === 1 ? '' : 's'}`
-      lines.push(blank())
-      lines.push(headerLine(ui.title('TRANSACTIONS'), ui.dim(meta)))
-      lines.push(blank())
-
       if (rows.length === 0) {
-        lines.push(indent(ui.dim('(sin movimientos en el período)')))
-        lines.push(blank())
-        process.stdout.write(lines.join('\n') + '\n')
+        process.stdout.write('(sin movimientos en el período)\n')
         return
       }
 
+      const lines: string[] = []
       let currentDate = ''
       for (const tx of rows) {
         if (tx.date !== currentDate) {
-          if (currentDate !== '') lines.push(blank())
-          lines.push(indent(ui.strong(tx.date)))
+          lines.push('')
+          lines.push(tx.date)
           currentDate = tx.date
         }
-        const color = colorForType(tx.type)
-        const amount = pad(color(formatSignedAmount(tx.type, tx.amount)), 16, 'left')
-        const category = pad(ui.accent(tx.category ?? ''), 22)
-        const description = ui.dim(tx.description ?? '')
-        lines.push(`${indent('')}  ${amount}  ${category} ${description}`)
+        const amount = padLeft(formatSignedAmount(tx.type, tx.amount), 16)
+        const category = padRight(tx.category ?? '', 22)
+        const description = tx.description ?? ''
+        lines.push(`  ${amount}  ${category} ${description}`)
       }
-      lines.push(blank())
-
       process.stdout.write(lines.join('\n') + '\n')
     })
 }

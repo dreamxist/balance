@@ -32,33 +32,99 @@ The session is cached at `~/.balance/session.json` (mode `0600`) and refreshed a
 
 ## Commands
 
+### Authentication
+
 | Command | Description |
 | --- | --- |
 | `bal login --api-key <key>` | Exchange an API key for a JWT and persist a session. |
-| `bal balance [--json]` | Show position, accumulated, delta, and per-account balances. |
-| `bal add <amount> <category> --account <name\|id> [--type <type>] [--note <text>] [--date YYYY-MM-DD] [--json]` | Register a transaction. `--type` defaults to `expense`. |
-| `bal list [--period day\|week\|month] [--type <type>] [--category <prefix>] [--account <name\|id>] [--limit N] [--json]` | List recent transactions. Default period is `week`. |
-| `bal key create --name <label> [--email <e>] [--password <p>] [--json]` | Generate a new API key. Plaintext is shown **once**. |
-| `bal key list [--include-revoked] [--json]` | List your API keys (never shows plaintext). |
+| `bal key create --name <label>` | Generate a new API key. Plaintext is shown **once**. |
+| `bal key list [--include-revoked]` | List your API keys (never shows plaintext). |
 | `bal key revoke <id\|prefix>` | Revoke an API key by UUID or unique prefix. |
 
-### Transaction types
+### Transactions
 
-`expense`, `income`, `refund`, `adjustment` are accepted by `bal add`.
+| Command | Description |
+| --- | --- |
+| `bal add <amount> <category> --account <name\|id> [--type] [--note] [--date]` | Register a transaction. Types: `expense` (default), `income`, `refund`, `adjustment`. |
+| `bal transfer <amount> --from <name\|id> --to <name\|id> [--note] [--date]` | Move money between two accounts (does not affect accumulated). |
+| `bal undo <tx-id>` | Reverse a transaction by creating a compensating adjustment (immutable ledger). |
+| `bal list [--period] [--type] [--category] [--account] [--search] [--date-from] [--date-to] [--limit]` | List transactions. Period: `day\|week\|month\|quarter\|year\|all`. `--type` accepts comma-separated values. |
+| `bal balance [--json]` | Show position, accumulated, delta, and per-account balances. |
 
-`transfer` and `debt_payment` are not exposed via `bal add` — they have richer semantics (paired account moves, debt linkage). Use the web app or the corresponding `core` functions until dedicated CLI commands land.
+### Accounts
 
-### Amount parsing
+| Command | Description |
+| --- | --- |
+| `bal account list [--archived] [--type] [--subtype]` | List accounts with balance and on-budget flag. |
+| `bal account create <name> --type <asset\|liability> --subtype <...> [--balance] [--credit-limit] [--entity] [--currency] [--off-budget]` | Create an account. |
+| `bal account archive <name\|id>` | Archive an account (soft delete). |
+| `bal account rename <name\|id> <new-name>` | Rename an account. |
+| `bal account balance <name\|id> <new-balance>` | Manually set a balance (typically for off-budget: investments, property). |
 
-`bal add` accepts plain integers (`12000`) or thousand-separated forms (`12.000`, `12,000`, `12 000`, `12_000`). All money is stored as integers (CLP in pesos, USD in cents). No decimals.
+### Debts (installment purchases)
 
-### Account selection
+| Command | Description |
+| --- | --- |
+| `bal debt list` | List active debts with progress. |
+| `bal debt create <amount> <installments> <category> --account <name\|id>` | Register an installment purchase. |
+| `bal debt pay <debt-id\|description>` | Pay one installment. |
+| `bal debt payoff <debt-id\|description> [--actual-amount]` | Pay off a debt entirely. |
+| `bal debt archive <debt-id\|description>` | Mark a debt as closed. |
 
-`--account` accepts either a UUID or a substring of the account name (case-insensitive fuzzy match). Ambiguous matches error out.
+### Receivables
 
-### JSON output
+| Command | Description |
+| --- | --- |
+| `bal receivable pay <receivable> <amount> --to <account>` | Record a payment received from a receivable. |
 
-Every command accepts `--json` for machine-readable output. Useful for piping into `jq`, scripts, or other tools.
+### Categories
+
+| Command | Description |
+| --- | --- |
+| `bal category list [--entity]` | List categories. |
+| `bal category create <parent-id> <id> <name>` | Create a subcategory under an existing parent. |
+| `bal category rename <id> <new-name>` | Rename a category. |
+| `bal category delete <id>` | Delete a category (fails if referenced by transactions). |
+
+### Recurring charges
+
+| Command | Description |
+| --- | --- |
+| `bal recurring list [--include-inactive]` | List recurring charges. |
+| `bal recurring create <name> <amount> --day <1-31> --category <id> --account <name\|id>` | Create a recurring charge that auto-registers on day_of_month. |
+| `bal recurring delete <id\|name>` | Delete a recurring charge. |
+
+### Snapshots & export
+
+| Command | Description |
+| --- | --- |
+| `bal snapshot create [--date]` | Capture a snapshot of current position (net worth, accumulated, delta). |
+| `bal snapshot list [--limit]` | Show snapshot history. |
+| `bal export [--format json\|csv] [--output <path>]` | Export all data. |
+
+### Fintual integration
+
+| Command | Description |
+| --- | --- |
+| `bal fintual sync [--dry-run]` | Pull latest Fintual prices and update off-budget account balances. |
+
+### SpA (business entity)
+
+| Command | Description |
+| --- | --- |
+| `bal spa dashboard` | Show business accounts, monthly income/expenses, IVA due. |
+| `bal spa invoice list [--direction emitida\|recibida] [--month YYYY-MM]` | List invoices. |
+| `bal spa invoice create --direction <d> --counterpart <name> --neto <amount> [--doc-type] [--folio] [--account]` | Create an invoice. |
+| `bal spa invoice pay <invoice-id> --account <name\|id>` | Mark an invoice as paid. |
+| `bal spa f29 <YYYY-MM>` | Compute F29 summary for a given month. |
+| `bal spa annual [year]` | Annual summary. |
+
+### Conventions
+
+- **Amount parsing**: plain integers (`12000`) or thousand-separated (`12.000`, `12,000`, `12 000`, `12_000`). All money is stored as integers (CLP in pesos, USD in cents). No decimals.
+- **Account selection**: `--account` accepts UUID or a substring of the name (case-insensitive fuzzy match). Ambiguous matches error out.
+- **JSON output**: every read command accepts `--json` for machine-readable output. Useful for piping into `jq`, scripts, or other tools.
+- **Transaction immutability**: transactions are never updated or deleted. Corrections use `bal undo` (creates a compensating adjustment).
 
 ## Environment variables
 
@@ -104,4 +170,8 @@ This package follows semver from `1.0.0` onward. Pre-1.0 releases may break betw
 
 ## Author
 
-Built by **Pancho Zúñiga**, building in public at [github.com/dreamxist](https://github.com/dreamxist).
+Built by **Pancho Zúñiga**. Building in public.
+
+- LinkedIn: <!-- TODO: add LinkedIn URL -->
+- GitHub: https://github.com/dreamxist
+- Twitter / X: <!-- TODO: add Twitter URL -->
