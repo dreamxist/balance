@@ -184,21 +184,28 @@ supabase secrets list
 
 ## Step 6 — Configure local env vars
 
-Copy `.env.example` to `.env` (gitignored) and fill in values:
+Copy `.env.example` to `.env` (gitignored) and fill in values for the CLI/core packages:
 
 ```bash
 cp .env.example .env
 ```
 
 ```env
-# Used by the CLI and core package
+# Used by the CLI and core package (repo root .env)
 SUPABASE_URL=https://<project-ref>.supabase.co
 SUPABASE_ANON_KEY=eyJ...
+```
 
-# Used by the Vite web app
+Create `apps/web/.env.local` for the Vite web app:
+
+```bash
+cat > apps/web/.env.local <<'EOF'
 VITE_SUPABASE_URL=https://<project-ref>.supabase.co
 VITE_SUPABASE_ANON_KEY=eyJ...
+EOF
 ```
+
+Vite reads `VITE_*` from `apps/web/.env*` files. If those vars are only in the root `.env`, the web app will fail at startup with `Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY`.
 
 For Vercel deploys, set the same `VITE_*` variables in the project settings.
 
