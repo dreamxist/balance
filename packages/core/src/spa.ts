@@ -59,7 +59,12 @@ export async function getSpaDashboard(supabase: TypedClient): Promise<SpaDashboa
     }
   }
 
-  const ivaDue = Math.round(monthlyIncome * 0.19)
+  // IVA real del período = IVA neto del F29 (débito de facturas afectas − crédito).
+  // Reusa get_f29_summary para respetar el doc_type: las facturas exentas y de
+  // exportación tienen iva = 0, así que no inflan el débito (antes esto era
+  // monthlyIncome * 0.19, que cobraba IVA sobre ingresos exentos/exportación).
+  const f29 = await getF29Summary(supabase, now.getFullYear(), now.getMonth() + 1)
+  const ivaDue = f29.iva_neto
 
   return { accounts: accounts ?? [], ivaDue, monthlyIncome, monthlyExpenses }
 }
