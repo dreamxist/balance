@@ -117,7 +117,7 @@ async function renderSpa(
   lines.push(blank())
   lines.push(row('Ingresos', formatCLP(dash.monthlyIncome)))
   lines.push(row('Gastos', formatCLP(dash.monthlyExpenses)))
-  lines.push(row('IVA estimado', `${formatCLP(dash.ivaDue)} ${ui.dim('(usa bal spa f29 para el oficial)')}`))
+  lines.push(row('IVA neto mes', `${formatCLP(dash.ivaDue)} ${ui.dim('(débito − crédito; detalle en bal spa f29)')}`))
   lines.push(blank())
 
   process.stdout.write(lines.join('\n') + '\n')

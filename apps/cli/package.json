@@ -1,6 +1,6 @@
 {
   "name": "@dreamxist/bal-cli",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Opinionated CLI for personal finance management. Every peso located, every peso explained. Bring Your Own Supabase.",
   "type": "module",
   "bin": {
