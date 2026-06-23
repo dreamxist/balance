@@ -22,7 +22,7 @@ function DashboardPage() {
   const [sheetOpen, setSheetOpen] = useState(false)
   const navigate = useNavigate()
   const reconciliation = useReconciliation()
-  const accounts = useAccounts()
+  const accounts = useAccounts({ entity: 'personal' })
   const monthly = useMonthlyBreakdown()
 
   const isLoading = reconciliation.isLoading || accounts.isLoading

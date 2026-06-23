@@ -15,6 +15,7 @@ interface FilterState {
   liquido?: boolean
   inversiones: boolean
   propiedades: boolean
+  spa?: boolean
 }
 
 interface EnrichedSnapshot {
@@ -22,6 +23,7 @@ interface EnrichedSnapshot {
   liquido: number
   inversiones: number
   propiedades: number
+  spa?: number
 }
 
 interface TrendChartProps {
@@ -95,6 +97,7 @@ export function TrendChart({ snapshots, isLoading, currentTotal, filters, enrich
         if (f.liquido) value += enriched.liquido
         if (f.inversiones) value += enriched.inversiones
         if (f.propiedades) value += enriched.propiedades
+        if (f.spa) value += enriched.spa ?? 0
         return { date: s.date, label: formatDateLabel(s.date), netWorth: value }
       }
       return { date: s.date, label: formatDateLabel(s.date), netWorth: s.net_worth ?? 0 }

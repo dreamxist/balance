@@ -1,12 +1,20 @@
 import type { Command } from 'commander'
 import {
+  createInterEntityTransfer,
   createSpaInvoiceV2,
+  createTransaction,
+  getAccounts,
   getF29Summary,
   getSpaAnnualSummary,
   getSpaDashboard,
   getSpaEmitidas,
   getSpaRecibidas,
+  markF29Declared,
   markSpaInvoicePaid,
+  parseUsdAmount,
+  usdToClp,
+  type SupabaseClient,
+  type Database,
 } from '@balance/core'
 import { getAuthedClient } from '../lib/client'
 import { fail } from '../lib/exit'
@@ -14,11 +22,30 @@ import { formatCLP, padLeft, padRight } from '../lib/format'
 import { resolveAccountId } from '../lib/resolve'
 import { parseAmount } from './add'
 
+type Client = SupabaseClient<Database>
+
 const VALID_DIRECTIONS = ['emitida', 'recibida'] as const
 type Direction = (typeof VALID_DIRECTIONS)[number]
 
-const VALID_DOC_TYPES = ['factura_afecta', 'factura_exenta', 'boleta'] as const
+const VALID_DOC_TYPES = ['factura_afecta', 'factura_exenta', 'factura_exportacion', 'boleta', 'nota_credito'] as const
 type DocType = (typeof VALID_DOC_TYPES)[number]
+
+/** Resolve the SpA account id: explicit ref (validated entity='spa') or the single SpA account. */
+async function resolveSpaAccount(client: Client, ref?: string): Promise<string> {
+  if (ref) {
+    const id = await resolveAccountId(client, ref)
+    const { data, error } = await client.from('accounts').select('name, entity').eq('id', id).single()
+    if (error) throw error
+    if (data.entity !== 'spa') {
+      fail(`Account "${data.name}" is entity='${data.entity}', not SpA. Use an entity='spa' account.`)
+    }
+    return id
+  }
+  const accounts = await getAccounts(client, { entity: 'spa' })
+  if (!accounts || accounts.length === 0) fail("No SpA accounts. Create one with entity='spa' or pass --account.")
+  if (accounts.length > 1) fail(`Multiple SpA accounts (${accounts.map((a) => a.name).join(', ')}). Use --account.`)
+  return accounts[0]!.id
+}
 
 function isDirection(v: string): v is Direction {
   return (VALID_DIRECTIONS as readonly string[]).includes(v)
@@ -290,10 +317,159 @@ function registerAnnual(group: Command): void {
     })
 }
 
+interface GastoOptions {
+  moneda: string
+  tc?: string
+  account?: string
+  note: string
+  date?: string
+  json?: boolean
+}
+
+function registerGasto(group: Command): void {
+  group
+    .command('gasto <amount> <category>')
+    .description('SpA expense (e.g. foreign SaaS, no VAT credit). USD converts to CLP.')
+    .option('--moneda <CLP|USD>', 'amount currency', 'CLP')
+    .option('--tc <rate>', 'CLP/USD exchange rate (required with --moneda USD)')
+    .option('--account <name|id>', 'SpA account (default: the single SpA account)')
+    .option('--note <text>', 'description', '')
+    .option('--date <YYYY-MM-DD>', 'date')
+    .option('--json', 'output JSON')
+    .action(async (amountRaw: string, category: string, opts: GastoOptions) => {
+      const moneda = opts.moneda.toUpperCase()
+      let raw: number
+      let amountClp: number
+      if (moneda === 'USD') {
+        if (!opts.tc) fail('--tc <rate> is required with --moneda USD')
+        raw = parseUsdAmount(amountRaw)
+        amountClp = usdToClp(raw, Number(opts.tc))
+      } else if (moneda === 'CLP') {
+        raw = parseAmount(amountRaw)
+        amountClp = raw
+      } else {
+        fail(`invalid --moneda: ${opts.moneda}. Use CLP or USD`)
+      }
+      const client = await getAuthedClient()
+      const accountId = await resolveSpaAccount(client, opts.account)
+      const note = moneda === 'USD' ? `${opts.note} [USD ${raw} @${opts.tc}]`.trim() : opts.note
+      const tx = await createTransaction(client, {
+        amount: amountClp,
+        category,
+        accountId,
+        description: note,
+        type: 'expense',
+        date: opts.date,
+      })
+      if (opts.json) {
+        process.stdout.write(JSON.stringify(tx) + '\n')
+      } else {
+        process.stdout.write(`SpA expense ${formatCLP(amountClp)} in ${category}\n`)
+      }
+    })
+}
+
+function collectCodes(value: string, prev: Record<string, number>): Record<string, number> {
+  const [code, raw] = value.split('=')
+  if (!code || raw === undefined) fail(`invalid --codigo: ${value}. Use code=value (e.g. 538=380000)`)
+  const n = Number(raw.replace(/[.,\s_]/g, ''))
+  if (!Number.isFinite(n)) fail(`invalid --codigo value: ${raw}`)
+  return { ...prev, [code]: n }
+}
+
+interface F29DeclararOptions {
+  folio?: string
+  date?: string
+  codigo: Record<string, number>
+  note?: string
+  json?: boolean
+}
+
+function registerF29Declarar(group: Command): void {
+  group
+    .command('f29-declarar <month>')
+    .description('Mark an F29 period (YYYY-MM) as declared, storing official SII codes')
+    .option('--codigo <code=value>', 'official SII code (repeatable), e.g. --codigo 538=380000', collectCodes, {})
+    .option('--folio <n>', 'declaration/confirmation number')
+    .option('--date <YYYY-MM-DD>', 'declaration date (default today)')
+    .option('--note <text>', 'note')
+    .option('--json', 'output JSON')
+    .action(async (monthArg: string, opts: F29DeclararOptions) => {
+      let year: number
+      let month: number
+      try {
+        ;({ year, month } = parseYearMonth(monthArg))
+      } catch (err) {
+        fail((err as Error).message)
+      }
+      const codes = opts.codigo
+      const officialCodes = Object.keys(codes).length > 0 ? codes : undefined
+      const client = await getAuthedClient()
+      const result = await markF29Declared(client, {
+        year,
+        month,
+        declaredAt: opts.date,
+        confirmationNumber: opts.folio,
+        notes: opts.note,
+        officialCodes,
+      })
+      if (opts.json) {
+        process.stdout.write(JSON.stringify(result) + '\n')
+      } else {
+        process.stdout.write(`F29 ${monthArg} declared${officialCodes ? ' (official codes)' : ' (app estimate)'}\n`)
+      }
+    })
+}
+
+interface SueldoOptions {
+  to: string
+  account?: string
+  note: string
+  date?: string
+  json?: boolean
+}
+
+function registerSueldo(group: Command): void {
+  group
+    .command('sueldo <amount>')
+    .description('Owner salary: inter-entity transfer SpA → personal account')
+    .requiredOption('--to <name|id>', 'destination personal account')
+    .option('--account <name|id>', 'source SpA account')
+    .option('--note <text>', 'description', 'Sueldo empresarial')
+    .option('--date <YYYY-MM-DD>', 'date')
+    .option('--json', 'output JSON')
+    .action(async (amountRaw: string, opts: SueldoOptions) => {
+      let amount: number
+      try {
+        amount = parseAmount(amountRaw)
+      } catch (err) {
+        fail((err as Error).message)
+      }
+      const client = await getAuthedClient()
+      const fromAccountId = await resolveSpaAccount(client, opts.account)
+      const toAccountId = await resolveAccountId(client, opts.to)
+      const result = await createInterEntityTransfer(client, {
+        fromAccountId,
+        toAccountId,
+        amount,
+        description: opts.note,
+        date: opts.date,
+      })
+      if (opts.json) {
+        process.stdout.write(JSON.stringify(result) + '\n')
+      } else {
+        process.stdout.write(`Sueldo ${formatCLP(amount)} SpA → personal\n`)
+      }
+    })
+}
+
 export function registerSpaCommand(program: Command): void {
-  const group = program.command('spa').description('Business entity (SpA) operations: invoices, F29, annual summary')
+  const group = program.command('spa').description('Business entity (SpA) operations: invoices, expenses, F29, salary, annual summary')
   registerDashboard(group)
   registerInvoice(group)
+  registerGasto(group)
   registerF29(group)
+  registerF29Declarar(group)
+  registerSueldo(group)
   registerAnnual(group)
 }

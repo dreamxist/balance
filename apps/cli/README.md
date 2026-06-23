@@ -48,8 +48,9 @@ The session is cached at `~/.balance/session.json` (mode `0600`) and refreshed a
 | `bal add <amount> <category> --account <name\|id> [--type] [--note] [--date]` | Register a transaction. Types: `expense` (default), `income`, `refund`, `adjustment`. |
 | `bal transfer <amount> --from <name\|id> --to <name\|id> [--note] [--date]` | Move money between two accounts (does not affect accumulated). |
 | `bal undo <tx-id>` | Reverse a transaction by creating a compensating adjustment (immutable ledger). |
-| `bal list [--period] [--type] [--category] [--account] [--search] [--date-from] [--date-to] [--limit]` | List transactions. Period: `day\|week\|month\|quarter\|year\|all`. `--type` accepts comma-separated values. |
-| `bal balance [--json]` | Show position, accumulated, delta, and per-account balances. |
+| `bal list [--period] [--type] [--category] [--account] [--search] [--entity] [--date-from] [--date-to] [--limit]` | List transactions. Period: `day\|week\|month\|quarter\|year\|all`. `--type` accepts comma-separated values. `--entity personal\|spa\|all`. |
+| `bal balance [--entity personal\|spa\|all] [--json]` | Show position, accumulated, delta, and per-account balances. Default entity `personal`; `spa` shows business cash + month flows. |
+| `bal patrimonio [--neto] [--tasa <pct>] [--json]` | Gross net worth (personal + SpA) with optional after-tax estimate. |
 
 ### Accounts
 
@@ -114,10 +115,15 @@ The session is cached at `~/.balance/session.json` (mode `0600`) and refreshed a
 | --- | --- |
 | `bal spa dashboard` | Show business accounts, monthly income/expenses, IVA due. |
 | `bal spa invoice list [--direction emitida\|recibida] [--month YYYY-MM]` | List invoices. |
-| `bal spa invoice create --direction <d> --counterpart <name> --neto <amount> [--doc-type] [--folio] [--account]` | Create an invoice. |
+| `bal spa invoice create --direction <d> --counterpart <name> --neto <amount> [--doc-type] [--folio] [--account] [--create-transaction]` | Create an invoice. `--doc-type`: `factura_afecta\|factura_exenta\|factura_exportacion\|boleta\|nota_credito`. |
 | `bal spa invoice pay <invoice-id> --account <name\|id>` | Mark an invoice as paid. |
+| `bal spa gasto <amount> <category> [--moneda CLP\|USD] [--tc <rate>] [--account]` | SpA expense (foreign SaaS = no VAT credit). USD converts to CLP. |
 | `bal spa f29 <YYYY-MM>` | Compute F29 summary for a given month. |
+| `bal spa f29-declarar <YYYY-MM> [--codigo code=value ...] [--folio]` | Mark a period declared, storing the official SII codes (source of truth). |
+| `bal spa sueldo <amount> --to <personal account>` | Owner salary: inter-entity transfer SpA → personal. |
 | `bal spa annual [year]` | Annual summary. |
+
+Chilean tax notes: foreign SaaS purchases use `bal spa gasto` (expense, no VAT credit — rolls into the annual income tax, not the monthly F29); domestic purchases with VAT use `bal spa invoice create --direction recibida`. The official SII F29 codes are the source of truth — store them with `bal spa f29-declarar --codigo`.
 
 ### Conventions
 

@@ -1,12 +1,21 @@
 ---
 name: balance
-description: Interactúa con el CLI `bal` para gestionar finanzas personales (app Balance con Supabase). Usa cuando el usuario menciona registrar un gasto o ingreso, consultar saldo, ver movimientos recientes, cuadrar cuentas, o nombra cuentas de débito, crédito, efectivo o inversiones. Requiere que `bal login` ya haya corrido (sesión en ~/.balance/session.json) o que BAL_API_KEY esté exportada.
+description: Interactúa con el CLI `bal` para gestionar finanzas personales Y de una SpA/empresa (app Balance con Supabase). Usa cuando el usuario menciona registrar un gasto o ingreso, consultar saldo, ver movimientos, cuadrar cuentas, o nombra cuentas de débito/crédito/efectivo/inversiones — y también para la SpA: facturar, IVA, F29, cierre mensual, sueldo de empresario, patrimonio bruto/neto. Requiere que `bal login` ya haya corrido (sesión en ~/.balance/session.json) o que BAL_API_KEY esté exportada.
 allowed-tools: Bash(bal *) Bash(node *) Bash(npx *)
 ---
 
-# Balance — CLI de finanzas personales del usuario
+# Balance — CLI de finanzas del usuario (personal + SpA)
 
-El CLI `bal` es la interfaz principal para hablar con la base de datos de finanzas personales (Supabase). El modelo core es **Balance Assertion with Reconciliation**: cada peso está ubicado (en una cuenta) y explicado (por una transacción). El cuadre se mide por `delta = posición - acumulado` y debe ser 0.
+El CLI `bal` es la interfaz principal para hablar con la base de datos de finanzas (Supabase). El modelo core es **Balance Assertion with Reconciliation**: cada peso está ubicado (en una cuenta) y explicado (por una transacción). El cuadre se mide por `delta = posición - acumulado` y debe ser 0.
+
+## Dos entidades: personal y SpA
+
+Balance maneja **una economía personal** y, opcionalmente, una **SpA/empresa**, separadas por el campo `entity` (`personal` | `spa`):
+
+- **Personal** → cuentas `on_budget=true`, tienen **cuadre** (delta 0). Comandos: `bal add`, `bal balance`, `bal list`.
+- **SpA** → cuentas `entity='spa'`, `on_budget=false` → cuentan en **patrimonio (bruto, pre-impuestos)** pero NO en tu cuadre personal. La reconciliación filtra por entidad, así que la SpA nunca rompe tu delta personal. Comandos: el grupo `bal spa` (facturas, F29, sueldo, anual) + `bal balance --entity spa`.
+
+Regla práctica: para lo personal usá los comandos base; para la empresa usá `bal spa` y `--entity spa`. Ante la duda de a qué entidad pertenece algo, preguntá.
 
 ## Cuándo activar este skill
 
@@ -15,6 +24,13 @@ El CLI `bal` es la interfaz principal para hablar con la base de datos de finanz
 - Pedidos sobre movimientos: "últimos gastos", "qué gasté en X", "muéstrame Y".
 - Cuentas configuradas por el usuario: débito, tarjetas de crédito, efectivo, inversiones (Broker/Fintual), cuentas por cobrar/pagar.
 - Categorías del dominio: `consumo.libre`, `ahorro`, `comida`, `transporte`, `servicios`, `apertura`.
+
+**SpA / empresa** (usar el grupo `bal spa`):
+- Facturación: "emití una factura", "facturé a <cliente>", "nota de crédito".
+- Impuestos: "IVA del mes", "F29", "cierre mensual", "cuánto declaré", "remanente".
+- Sueldo de empresario: "me pagué sueldo", "retiro", "sueldo empresarial".
+- Estado SpA: "cuánto tiene la SpA", "caja de la empresa", "utilidad/ventas/compras del año".
+- Patrimonio: "patrimonio total", "cuánto tengo neto/bruto", simulación post-impuestos.
 
 ## Archivos relacionados (cargar on-demand)
 
