@@ -35,12 +35,20 @@ export function formatSignedAmount(type: string, amount: number): string {
   return `${sign}${formatCLP(abs)}`
 }
 
+const VALID_ENTITIES = ['personal', 'spa', 'all'] as const
+type EntityFilter = (typeof VALID_ENTITIES)[number]
+
+function isEntityFilter(value: string): value is EntityFilter {
+  return (VALID_ENTITIES as readonly string[]).includes(value)
+}
+
 interface ListOptions {
   period: string
   category?: string
   account?: string
   type?: string
   search?: string
+  entity: string
   dateFrom?: string
   dateTo?: string
   limit: string
@@ -56,6 +64,7 @@ export function registerListCommand(program: Command): void {
     .option('--account <name|id>', 'filter by account')
     .option('--type <types>', `comma-separated, any of: ${VALID_TX_TYPES.join(', ')}`)
     .option('--search <text>', 'filter by description (case-insensitive contains)')
+    .option('--entity <entity>', `one of: ${VALID_ENTITIES.join(', ')}`, 'all')
     .option('--date-from <YYYY-MM-DD>', 'custom start date (overrides --period)')
     .option('--date-to <YYYY-MM-DD>', 'custom end date inclusive (overrides --period)')
     .option('--limit <n>', 'max rows', '100')
@@ -79,6 +88,10 @@ export function registerListCommand(program: Command): void {
         } catch (err) {
           fail((err as Error).message)
         }
+      }
+
+      if (!isEntityFilter(opts.entity)) {
+        fail(`invalid --entity: ${opts.entity}. One of: ${VALID_ENTITIES.join(', ')}`)
       }
 
       const limit = Number.parseInt(opts.limit, 10)
@@ -119,6 +132,7 @@ export function registerListCommand(program: Command): void {
       if (opts.category) query = query.ilike('category', `${opts.category}%`)
       if (types && types.length > 0) query = query.in('type', types)
       if (opts.search) query = query.ilike('description', `%${opts.search}%`)
+      if (opts.entity !== 'all') query = query.eq('entity', opts.entity)
 
       const { data, error } = await query
       if (error) throw error

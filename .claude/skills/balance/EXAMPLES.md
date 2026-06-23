@@ -69,3 +69,29 @@ Input: correo con "Se realizó un cargo de $5.200 con tu tarjeta de crédito ter
 | "anota un café" (sin monto) | Preguntá monto. |
 | "15.5 almuerzo" (monto con decimal) | El CLI rechaza. Preguntá si quiso decir 15500 o 15000. |
 | "cuánto gasté en viajes" (categoría inexistente) | Correr con `--category viaj` o `transporte` y aclarar al usuario qué filtro usaste. |
+
+## SpA / empresa (grupo `bal spa`)
+
+Reemplazá `<cliente>`, `<proveedor>`, `<cuenta personal>` con los nombres reales del usuario.
+
+| Prompt | Comando |
+|---|---|
+| "¿cuánto tiene la SpA?" | `bal balance --entity spa --json` (o `bal spa dashboard --json`) |
+| "movimientos de la empresa este mes" | `bal list --entity spa --period month --json` |
+| "emití factura de 2 millones a <cliente>, ya cobrada" | `bal spa invoice create --direction emitida --counterpart "<cliente>" --neto 2000000 --doc-type factura_afecta --create-transaction` |
+| "facturé export de 6.444 USD a <cliente>" (exenta) | convertir a CLP y `bal spa invoice create --direction emitida --counterpart "<cliente>" --neto <clp> --doc-type factura_exportacion --create-transaction` |
+| "registra la factura de <proveedor> nacional, neto 11.990" | `bal spa invoice create --direction recibida --counterpart "<proveedor>" --neto 11990` |
+| "gasté 10 USD en una SaaS (la pagó la SpA)" | `bal spa gasto 10 spa.gasto.operacional --moneda USD --tc <tc> --note "<saas>"` |
+| "marca cobrada la factura <id>" | `bal spa invoice pay <id> --account "<cuenta spa>"` |
+| "facturas emitidas de mayo" | `bal spa invoice list --direction emitida --month 2026-05 --json` |
+| "¿cómo va el F29 de mayo?" | `bal spa f29 2026-05 --json` |
+| "declaré el F29 de mayo, a pagar 380.355, folio 123" | `bal spa f29-declarar 2026-05 --codigo 502=380000 --codigo 091=380355 --folio 123` |
+| "me pagué 900k de sueldo a <cuenta personal>" | `bal spa sueldo 900000 --to "<cuenta personal>"` |
+| "resumen anual de la empresa" | `bal spa annual --json` |
+| "¿cuánto tengo de patrimonio?" | `bal patrimonio --json` |
+| "patrimonio neto pagando impuestos" | `bal patrimonio --neto --tasa 12.5 --json` |
+
+Notas SpA:
+- **Compras extranjeras (SaaS)** = `bal spa gasto` (sin IVA crédito; van al costo anual de renta). **Compras nacionales con IVA** = `bal spa invoice create --direction recibida` (dan IVA crédito en el F29).
+- El **F29 oficial del SII manda**: `bal spa f29 <mes>` da la estimación; cuando el usuario declara, cargá los códigos oficiales con `bal spa f29-declarar <mes> --codigo`.
+- Montos en **USD**: siempre `--moneda USD --tc <tipo de cambio>` (se guardan en CLP; acepta centavos).

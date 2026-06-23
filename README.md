@@ -80,6 +80,42 @@ Full reference: [`apps/cli/README.md`](./apps/cli/README.md).
 
 ---
 
+## Personal and SpA (two entities)
+
+Balance tracks **two entities** in one database: your **personal** finances and, optionally, a **company (SpA)**. The `entity` field (`personal` | `spa`) keeps accounts and transactions separate, and reconciliation is scoped per entity — so company activity never breaks your personal `delta = 0`.
+
+| | Personal | SpA (company) |
+| --- | --- | --- |
+| Accounts | `on_budget = true` | `entity = 'spa'`, usually `on_budget = false` |
+| Reconciliation | full cuadre (delta 0) | tracked as **gross net worth** (pre-tax), excluded from personal delta |
+| Commands | `bal add` / `bal balance` / `bal list` | `bal spa …` + `bal balance --entity spa` |
+
+### Personal
+
+```bash
+bal balance                 # personal reconciliation (default)
+bal add 12000 comida --account "Checking"
+bal list --period month --type expense
+```
+
+### SpA (invoicing, VAT/F29, owner salary)
+
+```bash
+bal balance --entity spa                                          # company cash + month income/expenses
+bal spa invoice create --direction emitida --counterpart "Client" --neto 2000000 --create-transaction  # sales invoice (VAT 19%)
+bal spa invoice create --direction recibida --counterpart "Supplier" --neto 11990                       # domestic purchase (VAT credit)
+bal spa gasto 10 saas --moneda USD --tc 950 --note "Hosting"      # foreign expense (no VAT credit)
+bal spa f29 2026-05                                               # monthly VAT/F29 summary
+bal spa f29-declarar 2026-05 --codigo 091=380355 --folio 123      # store official SII figures
+bal spa sueldo 900000 --to "Checking"                            # owner salary SpA→personal
+bal spa annual                                                   # yearly sales/costs/profit
+bal patrimonio --neto --tasa 12.5                               # gross vs estimated after-tax net worth
+```
+
+The SpA module is feature-flagged (`profiles.features.spa`) and also has a web view at `/spa`. Foreign SaaS purchases are expensed without VAT credit (they go to the annual income tax, not the monthly F29); the official SII F29 codes are the source of truth. Full reference: [CLI commands](./.claude/skills/balance/COMMANDS.md).
+
+---
+
 ## Self-host
 
 Balance is designed to run on your own Supabase project. Step-by-step instructions, including migrations, edge functions, secrets, and cron setup, live in [SETUP.md](./SETUP.md).

@@ -19,7 +19,7 @@ export const Route = createFileRoute('/_authenticated/patrimonio')({
   component: PatrimonioPage,
 })
 
-type FilterKey = 'inversiones' | 'propiedades'
+type FilterKey = 'inversiones' | 'propiedades' | 'spa'
 type TimeRange = '1y' | '2y' | '5y' | 'all'
 
 const TIME_LABELS: Record<TimeRange, string> = {
@@ -32,6 +32,7 @@ const TIME_LABELS: Record<TimeRange, string> = {
 const FILTER_LABELS: Record<FilterKey, string> = {
   inversiones: 'Stocks',
   propiedades: 'Propiedades',
+  spa: 'Empresa (SpA)',
 }
 
 function PatrimonioPage() {
@@ -41,6 +42,7 @@ function PatrimonioPage() {
   const [filters, setFilters] = useState<Record<FilterKey, boolean>>({
     inversiones: true,
     propiedades: false,
+    spa: true,
   })
   const [timeRange, setTimeRange] = useState<TimeRange>('all')
 
@@ -48,7 +50,9 @@ function PatrimonioPage() {
   const hasAccounts = (accounts.data?.length ?? 0) > 0
 
   const grouped = useMemo(() => {
-    const data = accounts.data ?? []
+    const all = accounts.data ?? []
+    // Personal categories exclude SpA so company cash never inflates personal líquido.
+    const data = all.filter((a) => a.entity === 'personal')
 
     const liquidAssets = data.filter(
       (a) => a.type === 'asset' && (a.subtype === 'debit' || a.subtype === 'cash' || a.subtype === 'receivable'),
@@ -63,10 +67,15 @@ function PatrimonioPage() {
     const propertyAccounts = data.filter((a) => a.subtype === 'property')
     const propertyTotal = propertyAccounts.reduce((s, a) => s + (a.balance ?? 0), 0)
 
+    // SpA = gross (pre-tax) net worth, its own bucket.
+    const spaAccounts = all.filter((a) => a.entity === 'spa')
+    const spaTotal = spaAccounts.reduce((s, a) => s + (a.balance ?? 0), 0)
+
     return {
       liquido: { total: liquidTotal, accounts: [] as Account[] },
       inversiones: { total: investmentTotal, accounts: investmentAccounts },
       propiedades: { total: propertyTotal, accounts: propertyAccounts },
+      spa: { total: spaTotal, accounts: spaAccounts },
     }
   }, [accounts.data])
 
@@ -74,6 +83,7 @@ function PatrimonioPage() {
     let total = 0
     if (filters.inversiones) total += grouped.inversiones.total
     if (filters.propiedades) total += grouped.propiedades.total
+    if (filters.spa) total += grouped.spa.total
     return total
   }, [grouped, filters])
 
@@ -86,6 +96,9 @@ function PatrimonioPage() {
     }
     if (filters.propiedades) {
       cats.push({ key: 'propiedades', label: 'Propiedades', amount: grouped.propiedades.total, percentage: (grouped.propiedades.total / safeTotal) * 100 })
+    }
+    if (filters.spa) {
+      cats.push({ key: 'spa', label: 'Empresa (SpA)', amount: grouped.spa.total, percentage: (grouped.spa.total / safeTotal) * 100 })
     }
     return cats
   }, [grouped, filters, filteredTotal])
@@ -104,13 +117,15 @@ function PatrimonioPage() {
     const snaps = snapshots.data ?? []
     const propertyTotal = grouped.propiedades.total
     const investmentTotal = grouped.inversiones.total
+    const spaTotal = grouped.spa.total
     return snaps.map((s) => ({
       date: s.date,
       liquido: 0,
       inversiones: investmentTotal,
       propiedades: propertyTotal,
+      spa: spaTotal,
     }))
-  }, [snapshots.data, grouped.inversiones.total, grouped.propiedades.total])
+  }, [snapshots.data, grouped.inversiones.total, grouped.propiedades.total, grouped.spa.total])
 
   const previousFiltered = useMemo(() => {
     if (!enrichedData || enrichedData.length < 2) return undefined
@@ -120,6 +135,7 @@ function PatrimonioPage() {
     let total = 0
     if (filters.inversiones) total += prev.inversiones
     if (filters.propiedades) total += prev.propiedades
+    if (filters.spa) total += prev.spa
     return total
   }, [enrichedData, filters])
 
@@ -219,33 +235,27 @@ function PatrimonioPage() {
         <div className="flex items-center justify-center rounded-md border border-border bg-card p-5">
           <DistributionPie
             items={(() => {
-              // If both filters active: show stocks vs propiedades
-              if (filters.inversiones && filters.propiedades) {
+              const CATEGORY_COLORS: Record<FilterKey, string> = {
+                inversiones: '#8b5cf6',
+                propiedades: '#f59e0b',
+                spa: '#10b981',
+              }
+              // More than one category active: one segment per category (incl. SpA)
+              if (categories.length > 1) {
                 return categories.map((cat) => ({
                   label: cat.label,
                   amount: cat.amount,
                   percentage: cat.percentage,
-                  color: cat.key === 'inversiones' ? '#8b5cf6' : '#f59e0b',
+                  color: CATEGORY_COLORS[cat.key],
                 }))
               }
-              // If only stocks: show Fintual fund breakdown
-              if (filters.inversiones) {
-                return grouped.inversiones.accounts.map((acc, i) => {
-                  const total = grouped.inversiones.total || 1
-                  const colors = ['#8b5cf6', '#a78bfa', '#7c3aed', '#c4b5fd']
-                  return {
-                    label: acc.name.replace('Fintual ', ''),
-                    amount: acc.balance ?? 0,
-                    percentage: ((acc.balance ?? 0) / total) * 100,
-                    color: colors[i % colors.length]!,
-                  }
-                })
-              }
-              // If only propiedades: show property breakdown
-              if (filters.propiedades) {
-                return grouped.propiedades.accounts.map((acc, i) => {
-                  const total = grouped.propiedades.total || 1
-                  const colors = ['#f59e0b', '#fbbf24', '#d97706', '#fcd34d']
+              // Exactly one category active: internal breakdown
+              const only = categories[0]
+              if (!only) return []
+              if (only.key === 'spa') {
+                return grouped.spa.accounts.map((acc, i) => {
+                  const total = grouped.spa.total || 1
+                  const colors = ['#10b981', '#34d399', '#059669', '#6ee7b7']
                   return {
                     label: acc.name,
                     amount: acc.balance ?? 0,
@@ -254,7 +264,17 @@ function PatrimonioPage() {
                   }
                 })
               }
-              return []
+              const accounts = grouped[only.key].accounts
+              const total = grouped[only.key].total || 1
+              const palette = only.key === 'inversiones'
+                ? ['#8b5cf6', '#a78bfa', '#7c3aed', '#c4b5fd']
+                : ['#f59e0b', '#fbbf24', '#d97706', '#fcd34d']
+              return accounts.map((acc, i) => ({
+                label: only.key === 'inversiones' ? acc.name.replace('Fintual ', '') : acc.name,
+                amount: acc.balance ?? 0,
+                percentage: ((acc.balance ?? 0) / total) * 100,
+                color: palette[i % palette.length]!,
+              }))
             })()}
           />
         </div>

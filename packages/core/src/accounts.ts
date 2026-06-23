@@ -29,10 +29,14 @@ export async function createAccount(supabase: TypedClient, input: {
 
 export async function getAccounts(supabase: TypedClient, options?: {
   includeArchived?: boolean
+  entity?: 'personal' | 'spa'
 }) {
   let query = supabase.from('accounts').select('*').order('created_at')
   if (!options?.includeArchived) {
     query = query.eq('is_archived', false)
+  }
+  if (options?.entity) {
+    query = query.eq('entity', options.entity)
   }
   const { data, error } = await query
   if (error) throw error

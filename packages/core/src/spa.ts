@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import type { SupabaseClient as UntypedClient } from '@supabase/supabase-js'
 import type { Database } from './types'
 
 type TypedClient = SupabaseClient<Database>
@@ -215,6 +216,9 @@ export interface MarkF29DeclaredInput {
   declaredAt?: string
   confirmationNumber?: string
   notes?: string
+  /** Raw SII F29 codes (e.g. { "538": 380000, "537": 2278, "091": 380355 }).
+   *  When provided, the official values win over the app's estimate. */
+  officialCodes?: Record<string, number>
 }
 
 export interface AnnualSummary {
@@ -403,12 +407,16 @@ export async function linkTransactionToInvoice(
 }
 
 export async function markF29Declared(supabase: TypedClient, input: MarkF29DeclaredInput) {
-  const { data, error } = await supabase.rpc('mark_f29_declared', {
+  // p_official_codes added in migration 00031; call through an untyped client
+  // until generated types are regenerated against the new function signature.
+  const client = supabase as unknown as UntypedClient
+  const { data, error } = await client.rpc('mark_f29_declared', {
     p_year: input.year,
     p_month: input.month,
     p_declared_at: input.declaredAt ?? undefined,
     p_confirmation_number: input.confirmationNumber ?? undefined,
     p_notes: input.notes ?? undefined,
+    p_official_codes: input.officialCodes ?? undefined,
   })
   if (error) throw error
   return data

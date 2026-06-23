@@ -10,6 +10,7 @@ import { registerFintualCommand } from './commands/fintual'
 import { registerKeyCommand } from './commands/key'
 import { registerListCommand } from './commands/list'
 import { registerLoginCommand } from './commands/login'
+import { registerPatrimonioCommand } from './commands/patrimonio'
 import { registerReceivableCommand } from './commands/receivable'
 import { registerRecurringCommand } from './commands/recurring'
 import { registerSnapshotCommand } from './commands/snapshot'
@@ -40,6 +41,7 @@ registerSnapshotCommand(program)
 registerExportCommand(program)
 registerFintualCommand(program)
 registerSpaCommand(program)
+registerPatrimonioCommand(program)
 
 async function main(): Promise<void> {
   if (process.argv.length <= 2) {

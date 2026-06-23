@@ -21,3 +21,8 @@ supabase/.branches/
 # OS
 Thumbs.db
 .vercel
+
+# Private handoff / local notes (never publish — may contain secrets)
+HANDOFF.md
+*HANDOFF*
+*.handoff.md

@@ -4,8 +4,8 @@ import { supabase } from '@/lib/supabase'
 
 export function useReconciliation() {
   return useQuery({
-    queryKey: ['reconciliation'],
-    queryFn: () => getReconciliationStatus(supabase),
+    queryKey: ['reconciliation', 'personal'],
+    queryFn: () => getReconciliationStatus(supabase, 'personal'),
     staleTime: 30_000,
   })
 }
