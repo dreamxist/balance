@@ -1,3 +1,4 @@
+import { createRequire } from 'node:module'
 import { Command } from 'commander'
 import { registerAccountCommand } from './commands/account'
 import { registerAddCommand } from './commands/add'
@@ -18,12 +19,15 @@ import { registerSpaCommand } from './commands/spa'
 import { registerTransferCommand } from './commands/transfer'
 import { registerUndoCommand } from './commands/undo'
 
+const require = createRequire(import.meta.url)
+const { version } = require('../package.json') as { version: string }
+
 const program = new Command()
 
 program
   .name('bal')
   .description('Balance CLI — personal finance assertion + reconciliation')
-  .version('0.2.1')
+  .version(version)
 
 registerLoginCommand(program)
 registerKeyCommand(program)
