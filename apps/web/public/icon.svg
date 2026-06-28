@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="14" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect width="512" height="512" fill="#09090B"/>
+  <circle cx="256" cy="256" r="120" fill="none" stroke="#FAFAFA" stroke-width="13"/>
+  <circle cx="256" cy="256" r="26" fill="#34D399" filter="url(#glow)"/>
+</svg>

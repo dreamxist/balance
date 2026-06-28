@@ -11,7 +11,7 @@ for (const row of logo.split('\n')) {
   lines.push('  ' + ui.logo(row))
 }
 lines.push(blank())
-lines.push(indent(ui.dim('every peso located, every peso explained.')))
+lines.push(indent(ui.dim('every coin located, every coin explained.')))
 lines.push(blank())
 lines.push(blank())
 
