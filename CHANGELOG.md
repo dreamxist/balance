@@ -6,6 +6,12 @@ All notable changes to Balance are documented here. Format based on
 
 ## [Unreleased]
 
+## [0.3.1] — 2026-06-28
+
+### Changed
+
+- Docs: the CLI README now documents the full recurring command set (`list`/`create`/`edit`/`pay`/`sync`) and the `bal balance` recurring reconciliation. No code changes.
+
 ## [0.3.0] — 2026-06-28
 
 ### Added
