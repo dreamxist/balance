@@ -1,6 +1,8 @@
-# Balance
-
-> Opinionated personal finance, built around one promise: every peso is located and explained.
+<div align="center">
+  <img src="docs/assets/icon.png" width="88" alt="Balance logo" />
+  <h1>Balance</h1>
+  <p><em>Opinionated personal finance, built around one promise: every coin is located and explained.</em></p>
+</div>
 
 Balance is a personal-finance app for developers who want full control over their money model. It is built on top of Supabase, ships a TypeScript CLI, and uses the **Balance Assertion with Reconciliation** pattern at its core: your real positions (cash in accounts, cards, investments, debts) must always equal the sum of your registered transactions. Delta = 0 or you find out fast.
 
@@ -25,7 +27,7 @@ Status: **Beta — building in public.** Used daily by the author to migrate 9 y
 - **Web dashboard.** React + Vite SPA: net worth, cash flow, debts, recurring charges, snapshots.
 - **Multiple account types.** Cash, debit, credit cards, investments (Fintual integration), debts, receivables, properties.
 - **Installment-aware debts.** Buy now, register later: full expense at purchase, monthly debt payments tracked separately.
-- **Recurring charges.** Edge function cron auto-registers monthly subscriptions and debt installments.
+- **Recurring charges.** Automatic ones (subscriptions, debt installments) are auto-registered by an edge-function cron with month catch-up; manual ones are surfaced at reconciliation so you know what's still on you to pay.
 - **Snapshots & immutable history.** Transactions are never edited or deleted — corrections happen via undo / refund / adjustment.
 - **Strict isolation.** Postgres RLS on every table. CLI uses short-lived JWTs minted from API keys, never `service_role`.
 - **Fully self-hostable.** Supabase free tier is enough for personal use.

@@ -21,71 +21,47 @@ async function shortUserTag(userId: string): Promise<string> {
   return `u_${hex.slice(0, 8)}`
 }
 
+interface ProcessedCharge {
+  name: string
+  status: string
+  amount?: number
+  reason?: string
+}
+
 // Process recurring charges for a single user. Always scoped to that user_id.
+//
+// All the logic (which charges are due, catch-up for past days this month,
+// ledger-based dedup, ownership re-check) lives in the SECURITY DEFINER RPC
+// process_due_recurring_charges. The cron runs with service_role
+// (auth.uid() = NULL), so it MUST pass p_user_id explicitly — the RPC guard
+// then trusts it. This is also what fixes the 42501 failures introduced when
+// create_transaction was hardened to require auth.uid() = account owner: the
+// RPC reuses the low-level primitives instead of create_transaction.
+//
+// Only automatic charges are processed here (p_include_manual: false); manual
+// charges are the user's responsibility (paid via pay_recurring_charge).
 async function processChargesForUser(
   ctx: ProcessContext,
   userId: string,
 ): Promise<ChargeResult[]> {
-  const results: ChargeResult[] = []
   const tag = await shortUserTag(userId)
 
-  const { data: charges, error: chargesError } = await ctx.supabase
-    .from('recurring_charges')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('day_of_month', ctx.currentDay)
-    .eq('is_active', true)
+  const { data, error } = await ctx.supabase.rpc('process_due_recurring_charges', {
+    p_as_of: ctx.todayStr,
+    p_include_manual: false,
+    p_user_id: userId,
+  })
 
-  if (chargesError) {
-    results.push(`[${tag}] charges query error: ${chargesError.message}`)
-    return results
+  if (error) {
+    return [`[${tag}] process error: ${error.message}`]
   }
 
-  for (const charge of charges ?? []) {
-    // Defense in depth: even though we filtered by user_id above, ensure the
-    // row really belongs to this user before touching it.
-    if (charge.user_id !== userId) {
-      results.push(`[${tag}] skipped charge with mismatched user_id`)
-      continue
-    }
-
-    const { data: existing } = await ctx.supabase
-      .from('transactions')
-      .select('id')
-      .eq('user_id', userId)
-      .eq('description', charge.name)
-      .eq('type', 'expense')
-      .gte('date', `${ctx.currentMonth}-01`)
-      .lte('date', ctx.endOfMonthStr)
-      .limit(1)
-
-    if (existing && existing.length > 0) {
-      results.push(`[${tag}] ${charge.name}: already charged`)
-      continue
-    }
-
-    // The create_transaction RPC derives user_id from the account_id row
-    // (accounts.user_id). We've already validated charge.user_id === userId
-    // above, and accounts are 1:1 with their owner via RLS-protected schema,
-    // so no additional p_user_id parameter is needed (and would break the RPC
-    // signature anyway).
-    const { error: rpcError } = await ctx.supabase.rpc('create_transaction', {
-      p_amount: charge.amount,
-      p_category: charge.category,
-      p_account_id: charge.account_id,
-      p_description: charge.name,
-      p_type: 'expense',
-      p_date: ctx.todayStr,
-    })
-
-    if (rpcError) {
-      results.push(`[${tag}] ${charge.name}: ERROR ${rpcError.message}`)
-    } else {
-      results.push(`[${tag}] ${charge.name}: charged $${charge.amount}`)
-    }
-  }
-
-  return results
+  const charges = ((data?.charges ?? []) as ProcessedCharge[])
+  return charges.map((c) => {
+    if (c.status === 'charged') return `[${tag}] ${c.name}: charged $${c.amount}`
+    if (c.status === 'skipped') return `[${tag}] ${c.name}: skipped (${c.reason})`
+    return `[${tag}] ${c.name}: ${c.status}`
+  })
 }
 
 // Process debt payments for a single user.
