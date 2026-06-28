@@ -239,7 +239,7 @@ App de finanzas personales que unifica la gestion financiera de una persona y un
 ### Financial Logic
 - Savings to Fintual = `transfer` type (not expense) — doesn't affect delta
 - Debt payments = `debt_payment` type — doesn't affect accumulated
-- Recurring charges managed via `recurring_charges` table + Edge Function cron
+- Recurring charges via `recurring_charges` table + `daily-charges` cron: `auto_charge` distinguishes automatic vs. manual; catch-up by month with ledger-based dedup (`transactions.metadata.recurring_charge_id`); managed with `bal recurring` and reconciled at `bal balance`
 - Fintual integration (optional): API at `https://fintual.cl/api/real_assets/{id}/days`, shares stored in account metadata
 - Account balances updated directly for off-budget accounts (no adjustment transactions)
 - Opening balance calibrated via `adjustment` with category `apertura`

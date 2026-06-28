@@ -6,6 +6,21 @@ All notable changes to Balance are documented here. Format based on
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-06-28
+
+### Added
+
+- **Recurring charges overhaul** — automatic vs. manual, per-entity (personal/SpA), with catch-up:
+  - `bal recurring list [--entity] [--due]` — monthly status (charged / due / upcoming), type and account.
+  - `bal recurring create [--manual] [--usd <n> --rate <clp>]`, `edit`, `pay`, `sync [--dry-run]` — interactive prompts via `@clack/prompts`.
+  - `bal balance` now reconciles recurring charges in an interactive terminal: applies due automatic charges and asks which manual ones were paid; report-only with `--json`.
+  - Schema: `recurring_charges.auto_charge` + `last_charged_on`; `recurring_charges_detailed` view; ledger-based dedup via `transactions.metadata`.
+  - New RPCs: `get_recurring_status`, `process_due_recurring_charges` (catch-up, dry-run, dual-path cron/user guard), `pay_recurring_charge`.
+
+### Fixed
+
+- **`daily-charges` cron** — was failing with `42501` since `create_transaction` was hardened to require `auth.uid()` (which is `NULL` under the cron's `service_role`). The cron now calls a `SECURITY DEFINER` RPC with an explicit `p_user_id`, registers charges due earlier in the month (catch-up), and dedupes off the ledger instead of by description.
+
 ## [0.2.1] — 2026-04-24
 
 ### Added

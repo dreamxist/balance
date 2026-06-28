@@ -27,7 +27,7 @@ Status: **Beta — building in public.** Used daily by the author to migrate 9 y
 - **Web dashboard.** React + Vite SPA: net worth, cash flow, debts, recurring charges, snapshots.
 - **Multiple account types.** Cash, debit, credit cards, investments (Fintual integration), debts, receivables, properties.
 - **Installment-aware debts.** Buy now, register later: full expense at purchase, monthly debt payments tracked separately.
-- **Recurring charges.** Edge function cron auto-registers monthly subscriptions and debt installments.
+- **Recurring charges.** Automatic ones (subscriptions, debt installments) are auto-registered by an edge-function cron with month catch-up; manual ones are surfaced at reconciliation so you know what's still on you to pay.
 - **Snapshots & immutable history.** Transactions are never edited or deleted — corrections happen via undo / refund / adjustment.
 - **Strict isolation.** Postgres RLS on every table. CLI uses short-lived JWTs minted from API keys, never `service_role`.
 - **Fully self-hostable.** Supabase free tier is enough for personal use.

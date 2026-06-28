@@ -85,8 +85,9 @@ begin
   -- Already charged this month?
   --   (a) a transaction we created (metadata link), OR
   --   (b) transition heuristic: an expense this month on the same account whose
-  --       description matches the charge name (catches manual entries like
-  --       "Render jun" / "Youtube Premium" so the first catch-up never doubles).
+  --       description matches the charge name (catches manual entries whose
+  --       description was tweaked, e.g. with a month suffix, so the first
+  --       catch-up never doubles).
   if exists (
     select 1 from transactions t
     where t.account_id = p_charge.account_id

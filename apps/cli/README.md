@@ -89,10 +89,18 @@ The session is cached at `~/.balance/session.json` (mode `0600`) and refreshed a
 
 ### Recurring charges
 
+Automatic charges are auto-registered by the `daily-charges` cron (and by `sync`)
+on their day of the month. Manual charges are ones you pay yourself — they are
+surfaced when you run `bal balance` in an interactive terminal, which applies any
+due automatic charges and asks which manual ones you have paid.
+
 | Command | Description |
 | --- | --- |
-| `bal recurring list [--include-inactive]` | List recurring charges. |
-| `bal recurring create <name> <amount> --day <1-31> --category <id> --account <name\|id>` | Create a recurring charge that auto-registers on day_of_month. |
+| `bal recurring list [--entity personal\|spa] [--due] [--include-inactive]` | List charges with their monthly status (charged / due / upcoming), type (auto/manual), entity and account. |
+| `bal recurring create [name] [amount] --day <1-31> --category <id> --account <name\|id> [--manual] [--usd <n> --rate <clp>]` | Create a charge — automatic by default, `--manual` for ones you pay yourself. Prompts interactively when args are omitted. |
+| `bal recurring edit <id\|name> [--amount\|--day\|--category\|--account\|--manual\|--auto\|--active\|--inactive]` | Edit a charge (interactive without flags). |
+| `bal recurring pay <id\|name> [--amount] [--date]` | Register a (manual) charge as paid now. |
+| `bal recurring sync [--dry-run] [--yes] [--include-manual] [--entity]` | Register automatic charges that are due this month (catch-up). |
 | `bal recurring delete <id\|name>` | Delete a recurring charge. |
 
 ### Snapshots & export
