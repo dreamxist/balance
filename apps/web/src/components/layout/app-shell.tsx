@@ -6,7 +6,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col">
       <TabNav />
-      <main className="mx-auto w-full max-w-7xl flex-1 px-6 py-6 pb-24 max-md:px-4 max-md:py-4 max-md:pb-24">
+      <main className="mx-auto w-full max-w-7xl flex-1 px-6 py-6 pb-[calc(6rem+env(safe-area-inset-bottom))] max-md:px-4 max-md:py-4">
         {children}
       </main>
     </div>
