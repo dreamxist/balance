@@ -32,7 +32,7 @@ function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <div className="min-h-screen overflow-x-hidden bg-background text-foreground font-sans">
+        <div className="min-h-screen overflow-x-hidden bg-background text-foreground font-sans pt-[env(safe-area-inset-top)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]">
           <Outlet />
         </div>
         <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
