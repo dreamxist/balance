@@ -1,8 +1,16 @@
 import type { Command } from 'commander'
-import { getAccounts, getReconciliationStatus, getSpaDashboard } from '@balance/core'
+import {
+  getAccounts,
+  getReconciliationStatus,
+  getRecurringStatus,
+  getSpaDashboard,
+  payRecurringCharge,
+  processDueRecurringCharges,
+} from '@balance/core'
 import { getAuthedClient } from '../lib/client'
 import { fail } from '../lib/exit'
 import { formatCLP } from '../lib/format'
+import { isInteractive, promptMultiselect } from '../lib/interactive'
 import { blank, chip, divider, headerLine, indent, pad, ui } from '../lib/ui'
 
 const VALID_ENTITIES = ['personal', 'spa', 'all'] as const
@@ -15,6 +23,7 @@ function isEntityFilter(value: string): value is EntityFilter {
 interface BalanceOptions {
   entity: string
   json?: boolean
+  recurring?: boolean
 }
 
 export function registerBalanceCommand(program: Command): void {
@@ -23,26 +32,44 @@ export function registerBalanceCommand(program: Command): void {
     .description('Show reconciliation status (position vs accumulated, delta)')
     .option('--entity <entity>', `one of: ${VALID_ENTITIES.join(', ')}`, 'personal')
     .option('--json', 'output JSON')
+    .option('--no-recurring', 'skip the recurring-charges reconciliation step')
     .action(async (opts: BalanceOptions) => {
       if (!isEntityFilter(opts.entity)) {
         fail(`invalid --entity: ${opts.entity}. One of: ${VALID_ENTITIES.join(', ')}`)
       }
       const client = await getAuthedClient()
+      const wantRecurring = opts.recurring !== false
+      const interactive = isInteractive() && opts.json !== true && wantRecurring
 
       if (opts.entity === 'spa') {
+        if (interactive) printRecurringSummary(await reconcileRecurringInteractive(client, 'spa'))
         await renderSpa(client, opts.json === true)
         return
       }
 
       // personal | all
       const scope = opts.entity === 'all' ? undefined : 'personal'
+
+      // Interactive cuadre: apply due automatic charges and ask about manual
+      // ones BEFORE reading the reconciliation, so the figures reflect them.
+      let recurringSummary: string[] = []
+      if (interactive) {
+        recurringSummary = await reconcileRecurringInteractive(client, scope)
+      }
+
       const [rec, accounts] = await Promise.all([
         getReconciliationStatus(client, scope),
         getAccounts(client, scope ? { entity: scope } : undefined),
       ])
 
       if (opts.json) {
-        process.stdout.write(JSON.stringify({ reconciliation: rec, accounts }) + '\n')
+        const status = wantRecurring
+          ? await getRecurringStatus(client, scope ? { entity: scope } : undefined)
+          : []
+        const pendingRecurring = status.filter((s) => s.status === 'due')
+        process.stdout.write(
+          JSON.stringify({ reconciliation: rec, accounts, pending_recurring: pendingRecurring }) + '\n',
+        )
         return
       }
 
@@ -67,6 +94,26 @@ export function registerBalanceCommand(program: Command): void {
         : chip(rec.delta_status, 'negative')
       lines.push(row('Delta', deltaColor(formatCLP(rec.delta)), deltaChip))
       lines.push(blank())
+
+      if (recurringSummary.length > 0) {
+        lines.push(headerLine(ui.title('RECURRING'), ui.dim('cuadre')))
+        lines.push(blank())
+        for (const s of recurringSummary) lines.push(indent(s))
+        lines.push(blank())
+      } else if (!interactive && wantRecurring) {
+        // Non-interactive (piped) — surface pending charges, never mutate.
+        const status = await getRecurringStatus(client, scope ? { entity: scope } : undefined)
+        const due = status.filter((s) => s.status === 'due')
+        if (due.length > 0) {
+          lines.push(headerLine(ui.title('RECURRING'), ui.warn(`${due.length} pendiente(s)`)))
+          lines.push(blank())
+          for (const d of due) {
+            const who = d.auto_charge ? ui.dim('(auto · bal recurring sync)') : ui.warn('(pagas tú)')
+            lines.push(indent(`${ui.warn('●')} ${ui.strong(d.name)} ${ui.dim(formatCLP(d.amount))} ${who}`))
+          }
+          lines.push(blank())
+        }
+      }
 
       lines.push(headerLine(ui.title('ACCOUNTS'), ui.dim(`${accounts.length} total`)))
       lines.push(blank())
@@ -120,5 +167,49 @@ async function renderSpa(
   lines.push(row('IVA neto mes', `${formatCLP(dash.ivaDue)} ${ui.dim('(débito − crédito; detalle en bal spa f29)')}`))
   lines.push(blank())
 
+  process.stdout.write(lines.join('\n') + '\n')
+}
+
+// Apply due automatic charges directly and ask which manual charges were paid.
+// Returns human-readable summary lines. Only call in an interactive TTY.
+async function reconcileRecurringInteractive(
+  client: Awaited<ReturnType<typeof getAuthedClient>>,
+  scope: 'personal' | 'spa' | undefined,
+): Promise<string[]> {
+  const summary: string[] = []
+
+  const result = await processDueRecurringCharges(client, { entity: scope, dryRun: false })
+  for (const c of result.charges) {
+    if (c.status === 'charged') {
+      summary.push(`${ui.positive('✓')} ${ui.dim('auto')} ${ui.strong(c.name)} ${ui.dim('→')} ${ui.strong(formatCLP(c.amount ?? 0))}`)
+    }
+  }
+
+  const status = await getRecurringStatus(client, scope ? { entity: scope } : undefined)
+  const manualDue = status.filter((s) => s.status === 'due' && !s.auto_charge)
+  if (manualDue.length > 0) {
+    const ids = await promptMultiselect<string>(
+      'Cobros manuales pendientes — ¿cuáles ya pagaste?',
+      manualDue.map((m) => ({ value: m.id, label: m.name, hint: `${formatCLP(m.amount)} · ${m.account_name}` })),
+    )
+    for (const m of manualDue) {
+      if (ids.includes(m.id)) {
+        const r = await payRecurringCharge(client, { chargeId: m.id })
+        if (r.status === 'charged') {
+          summary.push(`${ui.positive('✓')} ${ui.dim('pagado')} ${ui.strong(m.name)} ${ui.dim('→')} ${ui.strong(formatCLP(r.amount ?? 0))}`)
+        }
+      } else {
+        summary.push(`${ui.warn('●')} ${ui.warn('pendiente')} ${ui.strong(m.name)} ${ui.dim(`${formatCLP(m.amount)} · vence ${m.due_date}`)}`)
+      }
+    }
+  }
+
+  return summary
+}
+
+function printRecurringSummary(summary: string[]): void {
+  if (summary.length === 0) return
+  const lines = [blank(), headerLine(ui.title('RECURRING'), ui.dim('cuadre')), blank()]
+  for (const s of summary) lines.push(indent(s))
   process.stdout.write(lines.join('\n') + '\n')
 }
