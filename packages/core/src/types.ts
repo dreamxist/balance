@@ -302,12 +302,14 @@ export type Database = {
         Row: {
           account_id: string
           amount: number
+          auto_charge: boolean
           category: string
           created_at: string
           currency: string
           day_of_month: number
           id: string
           is_active: boolean
+          last_charged_on: string | null
           name: string
           updated_at: string
           user_id: string
@@ -315,12 +317,14 @@ export type Database = {
         Insert: {
           account_id: string
           amount: number
+          auto_charge?: boolean
           category: string
           created_at?: string
           currency?: string
           day_of_month: number
           id?: string
           is_active?: boolean
+          last_charged_on?: string | null
           name: string
           updated_at?: string
           user_id: string
@@ -328,12 +332,14 @@ export type Database = {
         Update: {
           account_id?: string
           amount?: number
+          auto_charge?: boolean
           category?: string
           created_at?: string
           currency?: string
           day_of_month?: number
           id?: string
           is_active?: boolean
+          last_charged_on?: string | null
           name?: string
           updated_at?: string
           user_id?: string
@@ -407,11 +413,13 @@ export type Database = {
           declared_at: string
           f29_total: number
           id: string
+          is_official: boolean
           iva_credito: number
           iva_debito: number
           iva_neto: number
           month: number
           notes: string | null
+          official_codes: Json | null
           ppm: number
           remanente_anterior: number
           remanente_siguiente: number
@@ -424,11 +432,13 @@ export type Database = {
           declared_at: string
           f29_total: number
           id?: string
+          is_official?: boolean
           iva_credito: number
           iva_debito: number
           iva_neto: number
           month: number
           notes?: string | null
+          official_codes?: Json | null
           ppm: number
           remanente_anterior?: number
           remanente_siguiente?: number
@@ -441,11 +451,13 @@ export type Database = {
           declared_at?: string
           f29_total?: number
           id?: string
+          is_official?: boolean
           iva_credito?: number
           iva_debito?: number
           iva_neto?: number
           month?: number
           notes?: string | null
+          official_codes?: Json | null
           ppm?: number
           remanente_anterior?: number
           remanente_siguiente?: number
@@ -704,6 +716,42 @@ export type Database = {
         }
         Relationships: []
       }
+      recurring_charges_detailed: {
+        Row: {
+          account_id: string | null
+          account_name: string | null
+          amount: number | null
+          auto_charge: boolean | null
+          category: string | null
+          created_at: string | null
+          currency: string | null
+          day_of_month: number | null
+          entity: Database["public"]["Enums"]["entity_type"] | null
+          id: string | null
+          is_active: boolean | null
+          last_charged_on: string | null
+          name: string | null
+          subtype: Database["public"]["Enums"]["account_subtype"] | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recurring_charges_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurring_charges_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "credit_card_status"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       spa_reimbursables: {
         Row: {
           account_id: string | null
@@ -770,6 +818,14 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      _apply_recurring_charge: {
+        Args: {
+          p_amount?: number
+          p_charge: Database["public"]["Tables"]["recurring_charges"]["Row"]
+          p_date: string
+        }
+        Returns: Json
       }
       _create_debt: {
         Args: {
@@ -1060,7 +1116,17 @@ export type Database = {
         Args: { p_month: number; p_year: number }
         Returns: Json
       }
-      get_reconciliation_status: { Args: never; Returns: Json }
+      get_reconciliation_status: {
+        Args: { p_entity?: Database["public"]["Enums"]["entity_type"] }
+        Returns: Json
+      }
+      get_recurring_status: {
+        Args: {
+          p_as_of?: string
+          p_entity?: Database["public"]["Enums"]["entity_type"]
+        }
+        Returns: Json
+      }
       get_snapshot_history: {
         Args: { p_limit?: number }
         Returns: {
@@ -1121,6 +1187,7 @@ export type Database = {
           p_declared_at?: string
           p_month: number
           p_notes?: string
+          p_official_codes?: Json
           p_year: number
         }
         Returns: {
@@ -1129,11 +1196,13 @@ export type Database = {
           declared_at: string
           f29_total: number
           id: string
+          is_official: boolean
           iva_credito: number
           iva_debito: number
           iva_neto: number
           month: number
           notes: string | null
+          official_codes: Json | null
           ppm: number
           remanente_anterior: number
           remanente_siguiente: number
@@ -1180,6 +1249,20 @@ export type Database = {
       }
       pay_off_debt: {
         Args: { p_actual_amount?: number; p_debt_id: string }
+        Returns: Json
+      }
+      pay_recurring_charge: {
+        Args: { p_amount?: number; p_charge_id: string; p_date?: string }
+        Returns: Json
+      }
+      process_due_recurring_charges: {
+        Args: {
+          p_as_of?: string
+          p_dry_run?: boolean
+          p_entity?: Database["public"]["Enums"]["entity_type"]
+          p_include_manual?: boolean
+          p_user_id?: string
+        }
         Returns: Json
       }
       receive_payment: {

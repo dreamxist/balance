@@ -53,6 +53,7 @@
     "node": ">=22"
   },
   "dependencies": {
+    "@clack/prompts": "^1.6.0",
     "@supabase/supabase-js": "^2.49.0",
     "@types/figlet": "^1.7.0",
     "commander": "^13.1.0",
