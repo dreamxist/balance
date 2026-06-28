@@ -1,6 +1,6 @@
 {
   "name": "@dreamxist/bal-cli",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "description": "Opinionated CLI for personal finance management. Every peso located, every peso explained. Bring Your Own Supabase.",
   "type": "module",
   "bin": {
@@ -53,6 +53,7 @@
     "node": ">=22"
   },
   "dependencies": {
+    "@clack/prompts": "^1.6.0",
     "@supabase/supabase-js": "^2.49.0",
     "@types/figlet": "^1.7.0",
     "commander": "^13.1.0",

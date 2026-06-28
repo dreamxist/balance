@@ -3,7 +3,7 @@ import { isExpired, loadSession } from '../lib/session'
 import { blank, chip, indent, kv, ruleLabel, ui } from '../lib/ui'
 
 const VERSION = '0.1.2'
-const TAGLINE = 'every peso located, every peso explained.'
+const TAGLINE = 'every coin located, every coin explained.'
 const DOCS_URL = 'github.com/dreamxist/balance'
 
 export async function renderBanner(): Promise<string> {

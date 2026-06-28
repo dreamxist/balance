@@ -91,9 +91,14 @@ describe('daily-charges source guards (GAP A)', () => {
     expect(source).toMatch(/from\(['"]recurring_charges['"]\)[\s\S]*?\.select\(['"]user_id['"]\)/)
   })
 
-  it('per-user charge query filters by user_id', () => {
-    // The processChargesForUser function must filter recurring_charges by user_id
-    expect(source).toMatch(/processChargesForUser[\s\S]{0,2000}\.eq\(['"]user_id['"], userId\)/)
+  it('per-user charge processing is scoped to the user via the RPC', () => {
+    // Charge ownership/dedup now lives in the SECURITY DEFINER RPC
+    // process_due_recurring_charges. The cron runs as service_role
+    // (auth.uid() = NULL), so processChargesForUser must pass the user_id
+    // explicitly for the RPC guard to trust it.
+    expect(source).toMatch(
+      /processChargesForUser[\s\S]{0,1500}process_due_recurring_charges[\s\S]{0,400}p_user_id: userId/,
+    )
   })
 
   it('per-user debt query filters by user_id', () => {
@@ -109,7 +114,10 @@ describe('daily-charges source guards (GAP A)', () => {
   })
 
   it('defends in depth against mismatched user_id rows', () => {
-    expect(source).toMatch(/charge\.user_id !== userId/)
+    // Charge path: the ownership re-check is enforced inside the SECURITY
+    // DEFINER RPC, which only trusts p_user_id because the cron passes it.
+    expect(source).toMatch(/p_user_id: userId/)
+    // Debt path: still re-checked per row in the edge function itself.
     expect(source).toMatch(/debt\.user_id !== userId/)
   })
 

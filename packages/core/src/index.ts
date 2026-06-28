@@ -5,6 +5,25 @@ export { createAccount, getAccounts, archiveAccount, renameAccount, updateAccoun
 export { createTransaction, undoTransaction, createOpeningBalance, getTransactions, getMonthlySummary } from './transactions'
 export { getReconciliationStatus } from './reconciliation'
 export type { ReconciliationStatus } from './reconciliation'
+export {
+  getRecurringStatus,
+  processDueRecurringCharges,
+  payRecurringCharge,
+  listRecurringDetailed,
+  createRecurringCharge,
+  updateRecurringCharge,
+  deleteRecurringCharge,
+} from './recurring'
+export type {
+  Entity,
+  RecurringStatus,
+  RecurringChargeDetailed,
+  RecurringStatusItem,
+  ProcessedCharge,
+  ProcessResult,
+  CreateRecurringInput,
+  UpdateRecurringInput,
+} from './recurring'
 export { usdToClp, parseUsdAmount } from './money'
 export { getCategories, createSubcategory, renameCategory, deleteCategory } from './categories'
 export { createInstallmentPurchase, payDebtInstallment, payOffDebt, getActiveDebts, archiveDebt } from './debts'

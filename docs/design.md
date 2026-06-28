@@ -20,8 +20,9 @@
 
 ### Logo
 - Wordmark: "Balance" in Geist Sans bold
-- Icon: Abstract equals sign (=) — represents equilibrium/delta=0
-- Usage: wordmark in nav bar, icon as favicon and mobile app icon
+- Icon: Ring with a centered emerald dot — represents a balanced position, delta = 0 (every coin located and explained). Source of truth: `apps/web/public/icon.svg`
+- Palette: background `#09090B`, ring `#FAFAFA`, dot `#34D399` (emerald, subtle glow)
+- Usage: wordmark in nav bar; icon as favicon, mobile app icon (PWA `manifest.webmanifest`), README header, and GitHub social preview (`docs/assets/social-preview.png`)
 
 ### Voice & Tone
 - Direct, no fluff
