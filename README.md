@@ -1,6 +1,8 @@
-# Balance
-
-> Opinionated personal finance, built around one promise: every peso is located and explained.
+<div align="center">
+  <img src="docs/assets/icon.png" width="88" alt="Balance logo" />
+  <h1>Balance</h1>
+  <p><em>Opinionated personal finance, built around one promise: every coin is located and explained.</em></p>
+</div>
 
 Balance is a personal-finance app for developers who want full control over their money model. It is built on top of Supabase, ships a TypeScript CLI, and uses the **Balance Assertion with Reconciliation** pattern at its core: your real positions (cash in accounts, cards, investments, debts) must always equal the sum of your registered transactions. Delta = 0 or you find out fast.
 

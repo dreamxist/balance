@@ -10,7 +10,7 @@ for (const row of logo.split('\n')) {
   lines.push('  ' + ui.logo(row))
 }
 lines.push(blank())
-lines.push(indent(ui.dim('every peso located, every peso explained.') + '   ' + ui.muted('v0.1.2')))
+lines.push(indent(ui.dim('every coin located, every coin explained.') + '   ' + ui.muted('v0.1.2')))
 lines.push(blank())
 lines.push(ruleLabel('start'))
 lines.push(blank())
