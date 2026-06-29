@@ -853,6 +853,42 @@ CERRADO:    Snapshot guardado, movimientos no editables
 
 ---
 
+## Como anotar para que el panel mensual quede limpio
+
+El panel del dashboard (Ingresos / Necesidades / Consumo / Ahorro / Disponible) solo
+debe reflejar **flujo real del mes**: lo que ganaste y lo que gastaste. El error mas
+comun es anotar **movimientos de plata** (mover entre cuentas, pagar tarjetas, cobrar
+algo que te deben) como `income`/`expense`, lo que infla el panel y puede dejar el
+Disponible en negativo aunque tus cuentas esten cuadradas.
+
+**Regla de oro:** el gasto se anota **cuando compras**, no cuando pagas la tarjeta.
+Pagar la TC solo mueve plata; el consumo ya quedo registrado al comprar.
+
+| Situacion | NO anotar como | Anotar como |
+|-----------|----------------|-------------|
+| Pagar la tarjeta de credito | `expense` (pago-cuentas) | `debt_payment` o `transfer` |
+| Mover plata entre tus cuentas (MP→BCH, →reserva) | `expense` / `income` | `transfer` |
+| Apartar/reponer ahorro a una cuenta de reserva | `expense` necesidad | `transfer` (o categoria `ahorro` si es aporte mensual real) |
+| Cobrar algo que te deben (receivable) | `income` + `expense` a mano | `receive_payment` (baja el receivable) |
+| Reembolso/cobro que se netea | `income` + `expense` | `receive_payment` / `transfer` |
+| Una compra real (examen, comida, bencina) | — | `expense` con su categoria (`necesidad.salud`, `consumo.libre`, …) |
+| Recategorizar o corregir un error | un `expense` inverso a mano | `bal undo <id>` (genera el ajuste correcto) |
+
+### Como lee el panel (getMonthlyBreakdown / aggregateBreakdown)
+
+Para ser robusto aunque algo se anote mal, el breakdown:
+
+1. Cuenta solo `income`/`expense`/`refund`. `transfer` y `debt_payment` quedan fuera.
+2. **Netea los undos**: un `adjustment` cuya descripcion empieza con `Undo:` revierte
+   su transaccion original en el bucket, asi un gasto deshecho deja de sumar.
+3. **Ignora categorias de movimiento/liquidacion** (`pago-cuentas`, `pago-tarjeta`,
+   `cobro`, `reembolso`, `movimiento`, `reserva`, `apertura`, `ajuste`). Son
+   contabilidad, no flujo.
+4. Un `income` con categoria raiz `ahorro` se trata como movimiento (efectivo
+   ingresado a una cuenta), no como ingreso del mes.
+5. **Disponible = Ingresos − (Necesidades + Consumo)**. El Ahorro se muestra aparte:
+   es una asignacion del ingreso, no una perdida, por eso no se resta del Disponible.
+
 ## Reglas de negocio
 
 1. **Snapshot es inmutable** — Una vez guardado no se modifica. Si hay error, se crea un ajuste.
