@@ -26,6 +26,7 @@ export function useTransactions(filters: TransactionFilters): UseInfiniteQueryRe
         category: filters.category,
         search: filters.search,
         month: filters.month,
+        entity: 'personal',
         limit: PAGE_SIZE,
         offset: pageParam,
       }

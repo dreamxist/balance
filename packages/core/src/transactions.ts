@@ -46,10 +46,12 @@ export async function getTransactions(supabase: TypedClient, options?: {
   types?: string[]
   month?: string
   search?: string
+  entity?: 'personal' | 'spa'
   limit?: number
   offset?: number
 }) {
   let query = supabase.from('transactions').select('*').order('date', { ascending: false })
+  if (options?.entity) query = query.eq('entity', options.entity)
   if (options?.accountId) query = query.eq('account_id', options.accountId)
   if (options?.category) query = query.ilike('category', `${options.category}%`)
   if (options?.types && options.types.length > 0) {
