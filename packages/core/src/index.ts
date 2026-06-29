@@ -26,6 +26,8 @@ export type {
 } from './recurring'
 export { usdToClp, parseUsdAmount } from './money'
 export { getCategories, createSubcategory, renameCategory, deleteCategory } from './categories'
+export { getMonthlyBreakdown, categoryRoot } from './breakdown'
+export type { MonthlyBreakdown, CategoryRoot } from './breakdown'
 export { createInstallmentPurchase, payDebtInstallment, payOffDebt, getActiveDebts, archiveDebt } from './debts'
 export { createTransfer, createInterEntityTransfer, receivePayment } from './transfers'
 export { createSnapshot, getSnapshotHistory } from './snapshots'
