@@ -1,8 +1,8 @@
 begin;
-select plan(14);
+select plan(17);
 
 -- ============================================================
--- Setup: two users, accounts, and a fixed month of transactions
+-- Setup: two users, accounts (incl. off-budget), fixed month
 -- ============================================================
 insert into auth.users (id, email, encrypted_password, email_confirmed_at, role, aud, instance_id)
 values
@@ -13,42 +13,75 @@ values
    crypt('password', gen_salt('bf')), now(), 'authenticated', 'authenticated',
    '00000000-0000-0000-0000-000000000000');
 
-insert into accounts (id, user_id, name, type, subtype, entity)
+insert into accounts (id, user_id, name, type, subtype, entity, on_budget)
 values
   ('b2000000-0000-0000-0000-000000000001', 'b1000000-0000-0000-0000-000000000001',
-   'Buckets Bank', 'asset', 'debit', 'personal'),
+   'Buckets Bank', 'asset', 'debit', 'personal', true),
   ('b2000000-0000-0000-0000-000000000002', 'b1000000-0000-0000-0000-000000000001',
-   'Buckets SpA Bank', 'asset', 'debit', 'spa'),
+   'Buckets SpA Bank', 'asset', 'debit', 'spa', true),
   ('b2000000-0000-0000-0000-000000000003', 'b1000000-0000-0000-0000-000000000002',
-   'Other User Bank', 'asset', 'debit', 'personal');
+   'Other User Bank', 'asset', 'debit', 'personal', true),
+  ('b2000000-0000-0000-0000-000000000004', 'b1000000-0000-0000-0000-000000000001',
+   'Buckets Fintual', 'asset', 'investment', 'personal', false);
 
 -- User A, personal, March 2026
 insert into transactions (user_id, account_id, type, amount, description, category, entity, date)
 values
+  -- income: sueldo + uncategorized transfer-in = 1.200.000; the 'Undo:' income
+  -- reversal (-100.000) nets it down to 1.100.000; the ahorro-rooted income
+  -- (90.000) is a deposit, not earnings, and never counts.
   ('b1000000-0000-0000-0000-000000000001', 'b2000000-0000-0000-0000-000000000001',
    'income', 1000000, 'Sueldo', 'ingreso.sueldo', 'personal', '2026-03-01'),
   ('b1000000-0000-0000-0000-000000000001', 'b2000000-0000-0000-0000-000000000001',
    'income', 200000, 'Transferencia recibida', null, 'personal', '2026-03-05'),
   ('b1000000-0000-0000-0000-000000000001', 'b2000000-0000-0000-0000-000000000001',
+   'adjustment', -100000, 'Undo: Ingreso duplicado', 'ingreso.sueldo', 'personal', '2026-03-05'),
+  ('b1000000-0000-0000-0000-000000000001', 'b2000000-0000-0000-0000-000000000001',
+   'income', 90000, 'Deposito a cuenta ahorro', 'ahorro.inversion', 'personal', '2026-03-07'),
+  -- necesidades: 100.000 + 400.000 + legacy 'supermercado' 15.000 = 515.000
+  ('b1000000-0000-0000-0000-000000000001', 'b2000000-0000-0000-0000-000000000001',
    'expense', 100000, 'Supermercado', 'necesidad.super', 'personal', '2026-03-06'),
   ('b1000000-0000-0000-0000-000000000001', 'b2000000-0000-0000-0000-000000000001',
    'expense', 400000, 'Arriendo', 'necesidad.arriendo', 'personal', '2026-03-06'),
+  ('b1000000-0000-0000-0000-000000000001', 'b2000000-0000-0000-0000-000000000001',
+   'expense', 15000, 'Feria', 'supermercado', 'personal', '2026-03-06'),
+  -- consumo: 80.000 - refund 30.000 + 25.000 - its undo 25.000 = 50.000
   ('b1000000-0000-0000-0000-000000000001', 'b2000000-0000-0000-0000-000000000001',
    'expense', 80000, 'Restoran', 'consumo.comida', 'personal', '2026-03-10'),
   ('b1000000-0000-0000-0000-000000000001', 'b2000000-0000-0000-0000-000000000001',
    'refund', 30000, 'Devolucion restoran', 'consumo.comida', 'personal', '2026-03-12'),
   ('b1000000-0000-0000-0000-000000000001', 'b2000000-0000-0000-0000-000000000001',
+   'expense', 25000, 'Cine', 'consumo.entretencion', 'personal', '2026-03-13'),
+  ('b1000000-0000-0000-0000-000000000001', 'b2000000-0000-0000-0000-000000000001',
+   'adjustment', 25000, 'Undo: Cine', 'consumo.entretencion', 'personal', '2026-03-13'),
+  -- ahorro: recorded as an expense with an ahorro-rooted category (the user's
+  -- real convention), 480.000
+  ('b1000000-0000-0000-0000-000000000001', 'b2000000-0000-0000-0000-000000000001',
+   'expense', 480000, 'Ahorro marzo - Fintual', 'ahorro', 'personal', '2026-03-20'),
+  -- por_categorizar: NULL 40.000 + unknown prefix 10.000 = 50.000
+  ('b1000000-0000-0000-0000-000000000001', 'b2000000-0000-0000-0000-000000000001',
    'expense', 40000, 'Compra sin categorizar', null, 'personal', '2026-03-15'),
   ('b1000000-0000-0000-0000-000000000001', 'b2000000-0000-0000-0000-000000000001',
    'expense', 10000, 'Prefijo desconocido', 'deuda.tc', 'personal', '2026-03-15'),
+  -- exclusions: non-flow categories, transfers (even ahorro-tagged pairs),
+  -- non-undo adjustments, other months
   ('b1000000-0000-0000-0000-000000000001', 'b2000000-0000-0000-0000-000000000001',
-   'transfer', 480000, 'Ahorro Fintual', 'ahorro.inversion', 'personal', '2026-03-20'),
+   'expense', 20000, 'Pago tarjeta', 'pago-tarjeta', 'personal', '2026-03-18'),
+  ('b1000000-0000-0000-0000-000000000001', 'b2000000-0000-0000-0000-000000000001',
+   'transfer', -480000, 'Ahorro -> Fintual', 'ahorro.inversion', 'personal', '2026-03-20'),
+  ('b1000000-0000-0000-0000-000000000001', 'b2000000-0000-0000-0000-000000000004',
+   'transfer', 480000, 'Ahorro <- Buckets Bank', 'ahorro.inversion', 'personal', '2026-03-20'),
   ('b1000000-0000-0000-0000-000000000001', 'b2000000-0000-0000-0000-000000000001',
    'transfer', 999999, 'Transferencia entre cuentas', null, 'personal', '2026-03-20'),
   ('b1000000-0000-0000-0000-000000000001', 'b2000000-0000-0000-0000-000000000001',
    'adjustment', 123456, 'Apertura', 'apertura', 'personal', '2026-03-01'),
   ('b1000000-0000-0000-0000-000000000001', 'b2000000-0000-0000-0000-000000000001',
-   'expense', 77777, 'Gasto de abril', 'consumo.comida', 'personal', '2026-04-02');
+   'adjustment', 77000, 'Cuadre de saldos', 'Otro ingreso', 'personal', '2026-03-02'),
+  ('b1000000-0000-0000-0000-000000000001', 'b2000000-0000-0000-0000-000000000001',
+   'expense', 77777, 'Gasto de abril', 'consumo.comida', 'personal', '2026-04-02'),
+  -- off-budget account: never counts
+  ('b1000000-0000-0000-0000-000000000001', 'b2000000-0000-0000-0000-000000000004',
+   'expense', 33333, 'Gasto en cuenta off-budget', 'consumo.comida', 'personal', '2026-03-21');
 
 -- User A, spa, March 2026
 insert into transactions (user_id, account_id, type, amount, description, category, entity, date)
@@ -72,26 +105,26 @@ set local request.jwt.claims to '{"sub":"b1000000-0000-0000-0000-000000000001","
 -- ============================================================
 select is(
   (select (get_monthly_buckets('2026-03-15'::date)->>'income')::bigint),
-  1200000::bigint,
-  'income sums all income of the month, categorized or not'
+  1100000::bigint,
+  'income = sueldo + uncategorized income - undo reversal; ahorro-rooted income excluded'
 );
 
 select is(
   (select (get_monthly_buckets('2026-03-15'::date)->>'necesidades')::bigint),
-  500000::bigint,
-  'necesidad% expenses land in necesidades'
+  515000::bigint,
+  'necesidad% expenses plus legacy supermercado land in necesidades'
 );
 
 select is(
   (select (get_monthly_buckets('2026-03-15'::date)->>'consumo')::bigint),
   50000::bigint,
-  'refund subtracts from its bucket (80000 - 30000 = 50000)'
+  'refund subtracts and Undo: reversal nets its expense back out (80-30+25-25)'
 );
 
 select is(
   (select (get_monthly_buckets('2026-03-15'::date)->>'ahorro')::bigint),
   480000::bigint,
-  'transfer with ahorro% category counts in ahorro'
+  'expense with ahorro-rooted category counts in ahorro'
 );
 
 select is(
@@ -102,8 +135,8 @@ select is(
 
 select is(
   (select (get_monthly_buckets('2026-03-15'::date)->>'disponible')::bigint),
-  50000::bigint,
-  'disponible = income - (necesidades + consumo + ahorro + por_categorizar)'
+  485000::bigint,
+  'disponible = income - (necesidades + consumo + por_categorizar); ahorro not subtracted'
 );
 
 select is(
@@ -112,15 +145,27 @@ select is(
   'month reflects the requested calendar month'
 );
 
--- Totals across buckets prove exclusions: transfer without ahorro category,
--- adjustment, April expense, other user, and spa entity are all absent
+-- Totals across buckets prove exclusions: non-flow pago-tarjeta, ALL transfers
+-- (including the ahorro.inversion pair), non-undo adjustments, off-budget
+-- account, April expense, other user, and spa entity are absent
 select is(
   (select (get_monthly_buckets('2026-03-15'::date)->>'necesidades')::bigint
         + (get_monthly_buckets('2026-03-15'::date)->>'consumo')::bigint
         + (get_monthly_buckets('2026-03-15'::date)->>'ahorro')::bigint
         + (get_monthly_buckets('2026-03-15'::date)->>'por_categorizar')::bigint),
-  1150000::bigint,
-  'plain transfers, adjustments, other months, other users and spa are excluded'
+  1095000::bigint,
+  'non-flow, transfers, plain adjustments, off-budget, other months/users/entity excluded'
+);
+
+-- The ahorro transfer pair specifically must contribute nothing (it used to
+-- cancel to 0 inside the bucket, hiding real savings; now it is simply out)
+select is(
+  (select (get_monthly_buckets('2026-03-15'::date)->>'ahorro')::bigint),
+  (select sum(amount) from transactions
+    where user_id = 'b1000000-0000-0000-0000-000000000001'
+      and type = 'expense' and lower(category) like 'ahorro%'
+      and date between '2026-03-01' and '2026-03-31')::bigint,
+  'ahorro equals its expense rows exactly: transfer legs contribute nothing'
 );
 
 -- ============================================================
@@ -153,6 +198,12 @@ select is(
   '{"income": 0, "necesidades": 0, "consumo": 0, "ahorro": 0, "por_categorizar": 0, "disponible": 0}'::jsonb,
   'empty month returns all zeros'
 );
+
+-- ============================================================
+-- Legacy category roots resolve as documented
+-- ============================================================
+select is(_bucket_root('necesidad.salud'), 'necesidad', 'tree ids resolve by head');
+select is(_bucket_root('Otro ingreso'), 'ingreso', 'legacy Otro ingreso maps to ingreso');
 
 -- ============================================================
 -- RLS: user B only sees their own numbers
