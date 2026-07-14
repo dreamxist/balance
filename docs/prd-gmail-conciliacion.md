@@ -163,5 +163,5 @@ Todo verde antes de marcar el checkbox y commitear. Si `supabase start` no está
 ### Fase 4 — Cierre
 - [x] Deploy (directo a **prod** con ok del usuario — stage sigue pausado): 7 migraciones aplicadas (incl. huérfana `20260628120000` recuperada al repo y matcher currency-aware por TC ****NNNN compartida), `gmail-sync` desplegada `--no-verify-jwt` (auth propia fail-closed, verificado 401), metadata de cuentas configurado, `CRON_SECRET`+`GMAIL_USER_ID` seteados, pg_cron `gmail-sync-am/pm` 11:00/23:00 UTC
 - [x] Docs actualizados (architecture, workflows, skill balance)
-- [x] `[MANUAL]` OAuth Google: client Desktop creado (proyecto <gcloud-project>), refresh token capturado con `scripts/gmail-auth.ts`, secrets configurados — sistema ACTIVO
+- [x] `[MANUAL]` OAuth Google: client Desktop creado (`<gcloud-project>`), refresh token capturado con `scripts/gmail-auth.ts`, secrets configurados — sistema ACTIVO
 - [x] Backfill histórico con dedup (`bal sync --since 2026-07-01`: 40 correos → 32 movimientos promovidos, 0 errores tras ajustar parsers a formatos reales; junio disponible con `--since 2026-06-01` si se quiere más historia)
