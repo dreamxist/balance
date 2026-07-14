@@ -1,5 +1,5 @@
 begin;
-select plan(23);
+select plan(30);
 
 -- ============================================================
 -- Setup: user, accounts with email-matching metadata, rules, staging
@@ -23,24 +23,29 @@ insert into accounts (id, user_id, name, type, subtype, entity, on_budget, metad
    'Fintual Inversiones', 'asset', 'investment', 'personal', false, '{}'),
   ('a7200000-0000-0000-0000-000000000005', 'a7000000-0000-0000-0000-000000000001',
    'Cuenta BCI SpA', 'asset', 'debit', 'spa', true,
-   '{"bank_account_numbers": ["779911"]}');
+   '{"bank_account_numbers": ["779911"]}'),
+  ('a7200000-0000-0000-0000-000000000006', 'a7000000-0000-0000-0000-000000000001',
+   'Mercado Pago', 'asset', 'debit', 'personal', true,
+   '{"bank_account_numbers": ["5566778899"]}');
 
 insert into categorization_rules (user_id, pattern, category, priority) values
   ('a7000000-0000-0000-0000-000000000001', 'CRUNCHYROLL', 'consumo.entretencion', 10),
   ('a7000000-0000-0000-0000-000000000001', 'CRUNCH', 'necesidad.salud', 1);
 
-insert into email_movements (user_id, gmail_message_id, source, amount, currency, counterparty, merchant, account_hint, email_date, bank_tx_id) values
-  ('a7000000-0000-0000-0000-000000000001', 'g1', 'bancochile_tc', 9900, 'CLP', null, 'CRUNCHYROLL MEMBERSHIP', '1234', '2026-07-01 10:00+00', null),
-  ('a7000000-0000-0000-0000-000000000001', 'g2', 'bancochile_tc', 15000, 'CLP', null, 'TIENDA DESCONOCIDA', '1234', '2026-07-01 12:00+00', null),
-  ('a7000000-0000-0000-0000-000000000001', 'g3', 'bancochile_transfer_out', 50000, 'CLP', 'JUAN PEREZ', null, '1122334455', '2026-07-02 09:00+00', 'TEF_123'),
-  ('a7000000-0000-0000-0000-000000000001', 'g4', 'bancochile_transfer_out', 480000, 'CLP', 'FINTUAL AGF', null, '1122334455', '2026-07-03 09:00+00', 'TEF_456'),
-  ('a7000000-0000-0000-0000-000000000001', 'g5', 'bancochile_transfer_out', 70000, 'CLP', 'JUAN PEREZ SOTO', null, '1122334455', '2026-07-04 10:00+00', 'TEF_789'),
-  ('a7000000-0000-0000-0000-000000000001', 'g6', 'bice_transfer_in', 70000, 'CLP', 'JUAN PEREZ SOTO', null, '7654321', '2026-07-04 11:00+00', null),
-  ('a7000000-0000-0000-0000-000000000001', 'g7', 'bancochile_transfer_in', 30000, 'CLP', 'PEDRO PAGADOR', null, '1122334455', '2026-07-05 09:00+00', null),
-  ('a7000000-0000-0000-0000-000000000001', 'g8', 'bancochile_pago_tc', 100000, 'CLP', 'TC Nacional', null, '1122334455', '2026-07-06 09:00+00', null),
-  ('a7000000-0000-0000-0000-000000000001', 'g9', 'bci_spa', 500000, 'CLP', 'CLIENTE SPA', null, '779911', '2026-07-07 09:00+00', null),
-  ('a7000000-0000-0000-0000-000000000001', 'g10', 'bancochile_tc', 2379, 'USD', null, 'OPENAI', '1234', '2026-07-08 09:00+00', null),
-  ('a7000000-0000-0000-0000-000000000001', 'g11', 'bancochile_tc', 4000, 'CLP', null, 'SIN CUENTA', '9999', '2026-07-08 10:00+00', null);
+-- g5/g6: same amount, same day, DIFFERENT unrelated parties and no dest_hint —
+-- the classic mirror false positive. They must NOT collapse into a transfer.
+insert into email_movements (user_id, gmail_message_id, source, amount, currency, counterparty, merchant, account_hint, dest_hint, email_date, bank_tx_id) values
+  ('a7000000-0000-0000-0000-000000000001', 'g1', 'bancochile_tc', 9900, 'CLP', null, 'CRUNCHYROLL MEMBERSHIP', '1234', null, '2026-07-01 10:00+00', null),
+  ('a7000000-0000-0000-0000-000000000001', 'g2', 'bancochile_tc', 15000, 'CLP', null, 'TIENDA DESCONOCIDA', '1234', null, '2026-07-01 12:00+00', null),
+  ('a7000000-0000-0000-0000-000000000001', 'g3', 'bancochile_transfer_out', 50000, 'CLP', 'JUAN PEREZ', null, '1122334455', '9988776655', '2026-07-02 09:00+00', 'TEF_123'),
+  ('a7000000-0000-0000-0000-000000000001', 'g4', 'bancochile_transfer_out', 480000, 'CLP', 'FINTUAL AGF', null, '1122334455', null, '2026-07-03 09:00+00', 'TEF_456'),
+  ('a7000000-0000-0000-0000-000000000001', 'g5', 'bancochile_transfer_out', 70000, 'CLP', 'ARRIENDO DEPTO', null, '1122334455', null, '2026-07-04 10:00+00', 'TEF_789'),
+  ('a7000000-0000-0000-0000-000000000001', 'g6', 'bice_transfer_in', 70000, 'CLP', 'CLIENTE FREELANCE', null, '7654321', null, '2026-07-04 11:00+00', null),
+  ('a7000000-0000-0000-0000-000000000001', 'g7', 'bancochile_transfer_in', 30000, 'CLP', 'PEDRO PAGADOR', null, '1122334455', null, '2026-07-05 09:00+00', null),
+  ('a7000000-0000-0000-0000-000000000001', 'g8', 'bancochile_pago_tc', 100000, 'CLP', 'TC Nacional', null, '1122334455', null, '2026-07-06 09:00+00', null),
+  ('a7000000-0000-0000-0000-000000000001', 'g9', 'bci_spa', 500000, 'CLP', 'CLIENTE SPA', null, '779911', null, '2026-07-07 09:00+00', null),
+  ('a7000000-0000-0000-0000-000000000001', 'g10', 'bancochile_tc', 2379, 'USD', null, 'OPENAI', '1234', null, '2026-07-08 09:00+00', null),
+  ('a7000000-0000-0000-0000-000000000001', 'g11', 'bancochile_tc', 4000, 'CLP', null, 'SIN CUENTA', '9999', null, '2026-07-08 10:00+00', null);
 
 -- ============================================================
 -- Cron path requires p_user_id
@@ -76,34 +81,45 @@ select is(
 select is(
   (select type::text from transactions where metadata->>'gmail_message_id' = 'g3'),
   'expense',
-  'outgoing transfer to third party becomes expense'
+  'outgoing transfer to a third-party account becomes expense (dest_hint not owned)'
+);
+
+-- Savings: expense on origin + direct credit on the off-budget account
+select is(
+  (select array[type::text, category] from transactions where metadata->>'gmail_message_id' = 'g4'),
+  array['expense', 'ahorro.inversion'],
+  'Fintual savings books as expense with ahorro.inversion (user convention)'
 );
 
 select is(
-  (select category from transactions where metadata->>'gmail_message_id' = 'g4'),
-  'ahorro.inversion',
-  'transfer to Fintual is categorized ahorro.inversion'
+  (select count(*)::bigint from transactions where type = 'transfer' and abs(amount) = 480000),
+  0::bigint,
+  'Fintual savings no longer creates a transfer pair'
 );
 
 select is(
-  (select count(*)::bigint from transactions
-    where type = 'transfer' and abs(amount) = 480000),
-  2::bigint,
-  'Fintual savings creates a transfer pair'
+  (select balance from accounts where id = 'a7200000-0000-0000-0000-000000000004'),
+  480000::bigint,
+  'off-budget Fintual balance credited directly'
+);
+
+-- Mirror false positive: unrelated same-amount out/in stay independent
+select is(
+  (select count(*)::bigint from transactions where type = 'transfer' and abs(amount) = 70000),
+  0::bigint,
+  'same amount + same day WITHOUT owned dest_hint does NOT collapse into a transfer'
 );
 
 select is(
-  (select count(*)::bigint from transactions
-    where type = 'transfer' and abs(amount) = 70000),
-  2::bigint,
-  'mirror out/in emails collapse into one own-to-own transfer pair'
+  (select type::text from transactions where metadata->>'gmail_message_id' = 'g5'),
+  'expense',
+  'the unrelated outgoing 70000 stays an expense'
 );
 
 select is(
-  (select count(*)::bigint from email_movements
-    where gmail_message_id in ('g5', 'g6') and status = 'promoted' and transaction_id is not null),
-  2::bigint,
-  'both mirror staging rows are promoted with linked transactions'
+  (select type::text from transactions where metadata->>'gmail_message_id' = 'g6'),
+  'income',
+  'the unrelated incoming 70000 stays an income'
 );
 
 select is(
@@ -177,7 +193,7 @@ select is(
 
 select is(
   (select count(*)::bigint from transactions where user_id = 'a7000000-0000-0000-0000-000000000001'),
-  12::bigint,
+  11::bigint,
   'transaction count stable across repeated runs'
 );
 
@@ -200,6 +216,49 @@ select is(
     where m.gmail_message_id = 'g12'),
   'g3',
   'duplicate staging row links to the original transaction'
+);
+
+-- ============================================================
+-- Provable own transfer: dest_hint resolves to an owned account
+-- ============================================================
+insert into email_movements (user_id, gmail_message_id, source, amount, currency, counterparty, account_hint, dest_hint, email_date) values
+  ('a7000000-0000-0000-0000-000000000001', 'g13', 'mp_transfer_out', 80000, 'CLP',
+   'JUAN PEREZ SOTO', '5566778899', '7654321', '2026-07-09 10:00+00'),
+  ('a7000000-0000-0000-0000-000000000001', 'g14', 'bice_transfer_in', 80000, 'CLP',
+   'JUAN PEREZ SOTO', '7654321', null, '2026-07-09 10:05+00'),
+  ('a7000000-0000-0000-0000-000000000001', 'g15', 'bice_transfer_in', 80000, 'CLP',
+   'JUAN PEREZ SOTO', '7654321', null, '2026-07-09 12:00+00');
+
+select is(
+  promote_email_movements('a7000000-0000-0000-0000-000000000001', null),
+  '{"promoted": 2, "skipped_existing": 1, "pending": 0, "errors": 0}'::jsonb,
+  'owned dest_hint creates the pair, consumes the mirror, links the late duplicate'
+);
+
+select is(
+  (select count(*)::bigint from transactions where type = 'transfer' and abs(amount) = 80000),
+  2::bigint,
+  'own transfer books exactly one out/in pair'
+);
+
+select is(
+  (select t.type::text from email_movements m join transactions t on t.id = m.transaction_id
+    where m.gmail_message_id = 'g14'),
+  'transfer',
+  'mirror IN email links to the transfer in-leg, not an income'
+);
+
+select is(
+  (select m.status from email_movements m where m.gmail_message_id = 'g15'),
+  'promoted',
+  'late duplicate IN email is linked, never double-booked'
+);
+
+select is(
+  (select count(*)::bigint from transactions
+    where type = 'income' and amount = 80000),
+  0::bigint,
+  'no phantom income created for any half of the own transfer'
 );
 
 -- ============================================================
