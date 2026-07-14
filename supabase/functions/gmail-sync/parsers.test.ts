@@ -297,3 +297,16 @@ Deno.test('known sender with unknown subject returns null', () => {
     null,
   )
 })
+
+Deno.test('non-movement notices from known senders are noise, not unknown errors', () => {
+  const subjects = [
+    'Notificación de acceso a información de Tarjeta de Débito',
+    'Autorización de firmas pendientes',
+    'Juan, recupera tu clave web fácilmente',
+    'Notificación por modificar o agregar un destinatario para transferencias',
+  ]
+  for (const subject of subjects) {
+    const result = parseEmail(email({ from: 'contacto@bci.cl', subject, body: 'Hola' }))
+    assertEquals(result, 'ignore', `"${subject}" should be noise`)
+  }
+})

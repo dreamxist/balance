@@ -201,7 +201,24 @@ Deno.serve(async (req) => {
       email = await fetchEmail(accessToken, id)
       fetched++
     } catch (err) {
-      failures.push(`fetch ${id}: ${err instanceof Error ? err.message : String(err)}`)
+      const message = err instanceof Error ? err.message : String(err)
+      // Quarantine instead of blocking: a stub error row makes the message
+      // visible for review AND lets the watermark advance — otherwise one
+      // permanently-failing message wedges sync forever. Only a failed stub
+      // (transient DB trouble) holds the watermark for retry.
+      const { error: stubError } = await supabase.from('email_movements').insert({
+        user_id: userId,
+        gmail_message_id: id,
+        source: 'unknown',
+        email_date: new Date().toISOString(),
+        status: 'error',
+        error_detail: `fetch failed: ${message.slice(0, 300)}`,
+      })
+      if (stubError && !stubError.message.includes('duplicate')) {
+        failures.push(`fetch ${id}: ${message}`)
+      } else {
+        stagedErrors++
+      }
       continue
     }
 
@@ -239,7 +256,21 @@ Deno.serve(async (req) => {
       .from('email_movements')
       .insert({ ...row, user_id: userId })
     if (insertError && !insertError.message.includes('duplicate')) {
-      failures.push(`stage ${id}: ${insertError.message}`)
+      // Same quarantine as fetch failures: try a minimal stub so a
+      // constraint-violating row cannot wedge the watermark permanently.
+      const { error: stubError } = await supabase.from('email_movements').insert({
+        user_id: userId,
+        gmail_message_id: email.id,
+        source: 'unknown',
+        email_date: email.date,
+        status: 'error',
+        error_detail: `stage failed: ${insertError.message.slice(0, 300)}`,
+      })
+      if (stubError && !stubError.message.includes('duplicate')) {
+        failures.push(`stage ${id}: ${insertError.message}`)
+      } else {
+        stagedErrors++
+      }
     }
   }
 

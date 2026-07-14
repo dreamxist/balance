@@ -51,7 +51,16 @@ const NOISE_SENDERS = [
   'noreply@mercadopago.com',
 ]
 
-const NOISE_SUBJECTS = [/cartola/i, /estado de cuenta/i]
+const NOISE_SUBJECTS = [
+  /cartola/i,
+  /estado de cuenta/i,
+  // Known transactional senders also emit non-movement notices; route them to
+  // noise so they don't pile up as 'unknown' error rows in the review inbox.
+  /notificaci[óo]n de acceso/i,
+  /autorizaci[óo]n de firmas/i,
+  /recupera tu clave/i,
+  /agregar un destinatario/i,
+]
 
 function stripHtml(html: string): string {
   return html
