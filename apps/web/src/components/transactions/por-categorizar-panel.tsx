@@ -29,7 +29,7 @@ export function PorCategorizarPanel() {
   const stagingRows = staging.data ?? []
   const total = txRows.length + stagingRows.length
 
-  if (transactions.isLoading || total === 0) return null
+  if (transactions.isLoading || staging.isLoading || total === 0) return null
 
   return (
     <div className="rounded-md border border-amber-500/40 bg-card">
@@ -65,10 +65,7 @@ function UncategorizedRow({ tx }: { tx: UncategorizedTransaction }) {
   const allCats = categories.data ?? []
 
   function subcategoriesOf(parentKey: string) {
-    return allCats.filter((c) => {
-      const id = c.id as string
-      return id.startsWith(`${parentKey}.`) && id !== parentKey
-    })
+    return allCats.filter((c) => c.id.startsWith(`${parentKey}.`) && c.id !== parentKey)
   }
 
   const assignMut = useMutation({
@@ -87,7 +84,10 @@ function UncategorizedRow({ tx }: { tx: UncategorizedTransaction }) {
       queryClient.invalidateQueries({ queryKey: ['monthly-breakdown'] })
       toast.success(rememberRule ? 'Categorizado y regla guardada' : 'Categorizado')
     },
-    onError: (e) => toast.error(e.message),
+    onError: (e) => {
+      console.error('setTransactionCategory failed', e)
+      toast.error(e.message)
+    },
   })
 
   return (
@@ -122,9 +122,9 @@ function UncategorizedRow({ tx }: { tx: UncategorizedTransaction }) {
             <div className="flex flex-wrap gap-1.5">
               {subcategoriesOf('ingreso').map((sub) => (
                 <CategoryPill
-                  key={sub.id as string}
-                  id={sub.id as string}
-                  label={sub.name as string}
+                  key={sub.id}
+                  id={sub.id}
+                  label={sub.name}
                   selected={selectedCategory === sub.id}
                   onSelect={setSelectedCategory}
                   selectedClass="bg-emerald-500 border-emerald-500 text-white"
@@ -154,9 +154,9 @@ function UncategorizedRow({ tx }: { tx: UncategorizedTransaction }) {
                 <div className="flex flex-wrap gap-1.5">
                   {subcategoriesOf(selectedGroup).map((sub) => (
                     <CategoryPill
-                      key={sub.id as string}
-                      id={sub.id as string}
-                      label={sub.name as string}
+                      key={sub.id}
+                      id={sub.id}
+                      label={sub.name}
                       selected={selectedCategory === sub.id}
                       onSelect={setSelectedCategory}
                       selectedClass="border-foreground bg-foreground text-background"
@@ -218,13 +218,18 @@ function CategoryPill({ id, label, selected, onSelect, selectedClass }: {
 
 function StagingRow({ row }: { row: EmailMovement }) {
   const queryClient = useQueryClient()
+  // Discarding is irreversible from the UI: require a second, explicit click.
+  const [confirmingDiscard, setConfirmingDiscard] = useState(false)
   const discardMut = useMutation({
     mutationFn: () => discardEmailMovement(supabase, row.id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inbox'] })
       toast.success('Movimiento descartado')
     },
-    onError: (e) => toast.error(e.message),
+    onError: (e) => {
+      console.error('discardEmailMovement failed', e)
+      toast.error(e.message)
+    },
   })
 
   const isError = row.status === 'error'
@@ -252,12 +257,17 @@ function StagingRow({ row }: { row: EmailMovement }) {
           </span>
         )}
         <Button
-          variant="ghost"
+          variant={confirmingDiscard ? 'destructive' : 'ghost'}
           size="sm"
+          aria-label={confirmingDiscard ? 'Confirmar descarte' : 'Descartar movimiento'}
           disabled={discardMut.isPending}
-          onClick={() => discardMut.mutate()}
+          onBlur={() => setConfirmingDiscard(false)}
+          onClick={() => {
+            if (confirmingDiscard) discardMut.mutate()
+            else setConfirmingDiscard(true)
+          }}
         >
-          ✕
+          {confirmingDiscard ? '¿Descartar?' : '✕'}
         </Button>
       </div>
     </div>

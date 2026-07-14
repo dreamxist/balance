@@ -131,7 +131,11 @@ export function registerInboxCommand(program: Command): void {
         ])
         if (action === 'quit') break
         if (action === 'discard') {
-          await discardEmailMovement(client, row.id)
+          const sure = await promptConfirm(
+            `¿Descartar "${label}"? No se promoverá nunca a transacción.`,
+            false,
+          )
+          if (sure) await discardEmailMovement(client, row.id)
         }
       }
 
