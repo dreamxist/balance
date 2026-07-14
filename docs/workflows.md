@@ -853,42 +853,6 @@ CERRADO:    Snapshot guardado, movimientos no editables
 
 ---
 
-## Como anotar para que el panel mensual quede limpio
-
-El panel del dashboard (Ingresos / Necesidades / Consumo / Ahorro / Disponible) solo
-debe reflejar **flujo real del mes**: lo que ganaste y lo que gastaste. El error mas
-comun es anotar **movimientos de plata** (mover entre cuentas, pagar tarjetas, cobrar
-algo que te deben) como `income`/`expense`, lo que infla el panel y puede dejar el
-Disponible en negativo aunque tus cuentas esten cuadradas.
-
-**Regla de oro:** el gasto se anota **cuando compras**, no cuando pagas la tarjeta.
-Pagar la TC solo mueve plata; el consumo ya quedo registrado al comprar.
-
-| Situacion | NO anotar como | Anotar como |
-|-----------|----------------|-------------|
-| Pagar la tarjeta de credito | `expense` (pago-cuentas) | `debt_payment` o `transfer` |
-| Mover plata entre tus cuentas (MP→BCH, →reserva) | `expense` / `income` | `transfer` |
-| Apartar/reponer ahorro a una cuenta de reserva | `expense` necesidad | `transfer` (o categoria `ahorro` si es aporte mensual real) |
-| Cobrar algo que te deben (receivable) | `income` + `expense` a mano | `receive_payment` (baja el receivable) |
-| Reembolso/cobro que se netea | `income` + `expense` | `receive_payment` / `transfer` |
-| Una compra real (examen, comida, bencina) | — | `expense` con su categoria (`necesidad.salud`, `consumo.libre`, …) |
-| Recategorizar o corregir un error | un `expense` inverso a mano | `bal undo <id>` (genera el ajuste correcto) |
-
-### Como lee el panel (getMonthlyBreakdown / aggregateBreakdown)
-
-Para ser robusto aunque algo se anote mal, el breakdown:
-
-1. Cuenta solo `income`/`expense`/`refund`. `transfer` y `debt_payment` quedan fuera.
-2. **Netea los undos**: un `adjustment` cuya descripcion empieza con `Undo:` revierte
-   su transaccion original en el bucket, asi un gasto deshecho deja de sumar.
-3. **Ignora categorias de movimiento/liquidacion** (`pago-cuentas`, `pago-tarjeta`,
-   `cobro`, `reembolso`, `movimiento`, `reserva`, `apertura`, `ajuste`). Son
-   contabilidad, no flujo.
-4. Un `income` con categoria raiz `ahorro` se trata como movimiento (efectivo
-   ingresado a una cuenta), no como ingreso del mes.
-5. **Disponible = Ingresos − (Necesidades + Consumo)**. El Ahorro se muestra aparte:
-   es una asignacion del ingreso, no una perdida, por eso no se resta del Disponible.
-
 ## Reglas de negocio
 
 1. **Snapshot es inmutable** — Una vez guardado no se modifica. Si hay error, se crea un ajuste.
@@ -981,4 +945,46 @@ Transferencia SpA -> Personal
   Sueldo
   Dividendos
   Prestamo
+```
+
+---
+
+## Flujo 13: Conciliación automática por correo (gmail-sync)
+
+```
+2×/día (pg_cron 11:00 y 23:00 UTC), o manual con `bal sync`:
+
+  1. gmail-sync consulta Gmail (senders bancarios conocidos, after:watermark)
+  2. Cada correo se parsea → email_movements (staging):
+       parseable        → status 'pending'
+       ruteado sin datos→ status 'error' + error_detail (nunca silencioso)
+       ruido            → ignorado (cartolas, encuestas, promos)
+  3. promote_email_movements convierte pending → transactions:
+       compra TC        → expense (categoría por reglas; sin match → NULL)
+       transfer out     → espejo in propio → transfer entre cuentas
+                          Fintual → transfer ahorro.inversion
+                          tercero → expense
+       transfer in      → income, categoría SIEMPRE NULL (el usuario decide)
+       pago TC          → transfer débito → credit_card (no es gasto)
+       bci_spa          → entity spa, income NULL
+       USD              → CLP con dólar del día (metadata.fx_estimated);
+                          sin tipo de cambio queda pending
+  4. Dedup: gmail_message_id y bank_tx_id en transactions.metadata
+     (correr dos veces / backfill no duplica)
+
+REVISIÓN (lo que quedó NULL o en staging):
+  Web: panel "Por categorizar" en /movimientos — pills de categoría +
+       checkbox "recordar regla para {comercio}" → categorization_rules
+  CLI: `bal inbox` interactivo; `bal rules list|add|rm`
+
+BUCKETS:
+  get_monthly_buckets es la única fuente (web y CLI idénticos).
+  Lo no categorizado se reporta como bucket propio `por_categorizar`,
+  jamás se mezcla con consumo. `bal buckets --json` es el output
+  canónico para skills y sesiones.
+
+GAPS ACEPTADOS (no generan correo):
+  - Compras con TC BICE ****NNNN
+  - Compras con débito
+  → se detectan al cuadrar contra el estado de cuenta / cartola
 ```

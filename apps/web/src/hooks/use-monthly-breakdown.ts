@@ -1,17 +1,11 @@
 import { useQuery, type UseQueryResult } from '@tanstack/react-query'
-import { getMonthlyBreakdown, type MonthlyBreakdown } from '@balance/core'
+import { getMonthlyBuckets, type MonthlyBuckets } from '@balance/core'
 import { supabase } from '@/lib/supabase'
 
-function currentMonth(): string {
-  const now = new Date()
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
-}
-
-export function useMonthlyBreakdown(month?: string): UseQueryResult<MonthlyBreakdown> {
-  const targetMonth = month ?? currentMonth()
+export function useMonthlyBreakdown(): UseQueryResult<MonthlyBuckets> {
   return useQuery({
-    queryKey: ['monthly-breakdown', targetMonth],
-    queryFn: () => getMonthlyBreakdown(supabase, { month: targetMonth, entity: 'personal' }),
+    queryKey: ['monthly-breakdown'],
+    queryFn: () => getMonthlyBuckets(supabase),
     staleTime: 30_000,
   })
 }

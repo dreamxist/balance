@@ -39,9 +39,9 @@ export function CuadrarPanel() {
   const delta = reconciliation.data?.delta ?? 0
   const deltaStatus = reconciliation.data?.delta_status ?? 'green'
   const income = monthly.data?.income ?? 0
-  // Gastos = real spending (necesidades + consumo). Ahorro is an allocation of
-  // income, not a loss, so it is not counted here nor in "Disponible este mes".
   const gastado = (monthly.data?.necesidades ?? 0) + (monthly.data?.consumo ?? 0)
+    + (monthly.data?.ahorro ?? 0) + (monthly.data?.por_categorizar ?? 0)
+  const disponible = monthly.data?.disponible ?? 0
 
   const allAccounts = (accounts.data ?? []).filter((a) => !a.is_archived && a.on_budget)
   const debitAccounts = allAccounts.filter((a) => a.type === 'asset' && (a.subtype === 'debit' || a.subtype === 'cash'))
@@ -101,8 +101,11 @@ export function CuadrarPanel() {
       <div className="flex items-center justify-between">
         <div>
           <p className="text-xs text-muted-foreground">Disponible este mes</p>
-          <p className="font-mono text-2xl font-bold tabular-nums">
-            {formatMoney(income - gastado)}
+          <p className={cn(
+            'font-mono text-2xl font-bold tabular-nums',
+            disponible < 0 && 'text-red-500',
+          )}>
+            {formatMoney(disponible)}
           </p>
         </div>
         <div className="text-right text-sm space-y-0.5">

@@ -5,6 +5,7 @@ import { TransactionFiltersBar } from '@/components/transactions/transaction-fil
 import { TransactionList } from '@/components/transactions/transaction-list'
 import { BalanceHistoryChart } from '@/components/transactions/balance-history-chart'
 import { CuadrarPanel } from '@/components/transactions/cuadrar-panel'
+import { PorCategorizarPanel } from '@/components/transactions/por-categorizar-panel'
 import { SyncButton } from '@/components/sync-button'
 import { Fab } from '@/components/ui/fab'
 import { BottomSheet } from '@/components/ui/bottom-sheet'
@@ -46,6 +47,7 @@ function MovimientosPage() {
       </div>
       <BalanceHistoryChart />
       <CuadrarPanel />
+      <PorCategorizarPanel />
       <TransactionFiltersBar filters={filters} onFiltersChange={setFilters} />
       {/* MonthlySummary removed — cuadrar panel already shows income/expenses */}
       <TransactionList

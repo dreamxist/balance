@@ -7,11 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.5"
-  }
   public: {
     Tables: {
       accounts: {
@@ -166,6 +161,41 @@ export type Database = {
           },
         ]
       }
+      categorization_rules: {
+        Row: {
+          category: string
+          created_at: string
+          id: string
+          pattern: string
+          priority: number
+          user_id: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          id?: string
+          pattern: string
+          priority?: number
+          user_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: string
+          pattern?: string
+          priority?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "categorization_rules_category_fkey"
+            columns: ["category"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       debts: {
         Row: {
           account_id: string
@@ -237,6 +267,78 @@ export type Database = {
             columns: ["account_id"]
             isOneToOne: false
             referencedRelation: "credit_card_status"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_movements: {
+        Row: {
+          account_hint: string | null
+          amount: number | null
+          bank_tx_id: string | null
+          counterparty: string | null
+          created_at: string
+          currency: string | null
+          email_date: string | null
+          error_detail: string | null
+          gmail_message_id: string
+          id: string
+          merchant: string | null
+          raw_snippet: string | null
+          source: string
+          status: string
+          transaction_id: string | null
+          user_id: string
+        }
+        Insert: {
+          account_hint?: string | null
+          amount?: number | null
+          bank_tx_id?: string | null
+          counterparty?: string | null
+          created_at?: string
+          currency?: string | null
+          email_date?: string | null
+          error_detail?: string | null
+          gmail_message_id: string
+          id?: string
+          merchant?: string | null
+          raw_snippet?: string | null
+          source: string
+          status?: string
+          transaction_id?: string | null
+          user_id: string
+        }
+        Update: {
+          account_hint?: string | null
+          amount?: number | null
+          bank_tx_id?: string | null
+          counterparty?: string | null
+          created_at?: string
+          currency?: string | null
+          email_date?: string | null
+          error_detail?: string | null
+          gmail_message_id?: string
+          id?: string
+          merchant?: string | null
+          raw_snippet?: string | null
+          source?: string
+          status?: string
+          transaction_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_movements_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "spa_reimbursables"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_movements_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
             referencedColumns: ["id"]
           },
         ]
@@ -537,6 +639,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      sync_state: {
+        Row: {
+          gmail_watermark: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          gmail_watermark?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          gmail_watermark?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       transactions: {
         Row: {
@@ -901,6 +1021,31 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      _match_account_by_hint: {
+        Args: { p_hint: string; p_user_id: string }
+        Returns: {
+          balance: number
+          created_at: string
+          credit_limit: number | null
+          currency: string
+          entity: Database["public"]["Enums"]["entity_type"]
+          id: string
+          is_archived: boolean
+          metadata: Json | null
+          name: string
+          on_budget: boolean
+          subtype: Database["public"]["Enums"]["account_subtype"]
+          type: Database["public"]["Enums"]["account_type"]
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "accounts"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       _update_account_balance: {
         Args: { p_account_id: string; p_delta: number }
         Returns: {
@@ -1116,6 +1261,13 @@ export type Database = {
         Args: { p_month: number; p_year: number }
         Returns: Json
       }
+      get_monthly_buckets: {
+        Args: {
+          p_entity?: Database["public"]["Enums"]["entity_type"]
+          p_month?: string
+        }
+        Returns: Json
+      }
       get_reconciliation_status: {
         Args: { p_entity?: Database["public"]["Enums"]["entity_type"] }
         Returns: Json
@@ -1265,6 +1417,10 @@ export type Database = {
         }
         Returns: Json
       }
+      promote_email_movements: {
+        Args: { p_usd_rate?: number; p_user_id?: string }
+        Returns: Json
+      }
       receive_payment: {
         Args: {
           p_amount: number
@@ -1316,6 +1472,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      set_transaction_category: {
+        Args: { p_category: string; p_transaction_id: string }
+        Returns: Json
       }
       undo_transaction: { Args: { p_transaction_id: string }; Returns: Json }
       update_account_balance_manual: {
@@ -1513,3 +1673,4 @@ export const Constants = {
     },
   },
 } as const
+

@@ -104,3 +104,4 @@ begin
   return to_jsonb(v_snapshot);
 end;
 $$;
+

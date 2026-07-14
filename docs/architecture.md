@@ -1896,3 +1896,77 @@ CLI:
   Local (bun run) o compilado con `bun build --compile`
   Se puede publicar en npm si quieres
 ```
+
+---
+
+## Ingesta de correos bancarios (gmail-sync)
+
+El balance se actualiza solo 2×/día leyendo los correos de notificación
+bancaria del Gmail del usuario. Ver `docs/workflows.md` (flujo de conciliación
+por correo) y `docs/setup-gmail.md` (setup manual de OAuth y cron).
+
+### Tablas
+
+```
+email_movements        Staging de correos parseados.
+                       gmail_message_id UNIQUE, source (check con 11 fuentes:
+                       bancochile_tc, bancochile_pago, bancochile_transfer_out/in,
+                       bancochile_pago_tc, bice_transfer_out/in, bice_pago_tc,
+                       mp_transfer_out, tenpo_transfer_in, bci_spa),
+                       amount, currency (CLP|USD), counterparty, merchant,
+                       account_hint, email_date, bank_tx_id (TEF_…),
+                       status (pending|promoted|discarded|error),
+                       transaction_id FK, raw_snippet, error_detail.
+                       RLS owner-only. Índice parcial sobre status='pending'.
+
+categorization_rules   pattern (substring case-insensitive sobre merchant) →
+                       category FK, priority (mayor gana). RLS owner-only.
+
+sync_state             Watermark del último sync exitoso por usuario.
+                       Escrito por la edge function (service role).
+```
+
+### Funciones
+
+```
+get_monthly_buckets(p_month, p_entity)
+  SECURITY INVOKER. Fuente única de buckets mensuales:
+  {income, necesidades, consumo, ahorro, por_categorizar, disponible, month}.
+  category NULL o prefijo desconocido → por_categorizar (nunca dentro de
+  consumo). transfer cuenta solo con categoría ahorro%. Web (hook
+  use-monthly-breakdown) y CLI (bal buckets) consumen esta RPC.
+
+set_transaction_category(p_transaction_id, p_category)
+  SECURITY DEFINER. ÚNICA mutación permitida sobre transactions: solo el
+  campo category. Valida ownership (42501) y categoría visible; escribe
+  audit_log (el trigger de transactions es insert-only).
+
+promote_email_movements(p_user_id, p_usd_rate)
+  SECURITY DEFINER, auth dual (JWT → self; cron pasa p_user_id; anon
+  revocado). Promueve staging pending → transactions vía primitives.
+  Reglas: dedup por metadata gmail_message_id/bank_tx_id (índices parciales
+  en transactions), par espejo out/in → transfer entre cuentas propias,
+  categorización por rules (priority), Fintual → transfer ahorro.inversion,
+  transfer_in de tercero → income category NULL, pago TC → transfer
+  débito→credit_card, bci_spa → entity spa, USD convertido con p_usd_rate
+  (sin rate queda pending). Filas sin cuenta matcheable → status error.
+
+_match_account_by_hint(p_user_id, p_hint)
+  Primitive: matchea account_hint contra accounts.metadata
+  (bank_account_numbers[] | card_last4).
+```
+
+### Edge Function `gmail-sync`
+
+```
+supabase/functions/gmail-sync/
+  index.ts     auth CRON_SECRET fail-closed o JWT; watermark; fetch Gmail;
+               staging; fx mindicador.cl; promote; resumen JSON.
+  parsers.ts   parsers puros por fuente (deno test con fixtures).
+  gmail.ts     helpers puros de la API de Gmail.
+
+Secrets: GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, GMAIL_REFRESH_TOKEN
+         (scope gmail.readonly), GMAIL_USER_ID (modo cron), CRON_SECRET.
+Cron: pg_cron 2×/día (11:00 y 23:00 UTC) vía dashboard.
+Bootstrap OAuth: scripts/gmail-auth.ts (one-shot, deno).
+```

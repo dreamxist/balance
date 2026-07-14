@@ -4,17 +4,21 @@ import { registerAccountCommand } from './commands/account'
 import { registerAddCommand } from './commands/add'
 import { registerBalanceCommand } from './commands/balance'
 import { renderBanner } from './commands/banner'
+import { registerBucketsCommand } from './commands/buckets'
 import { registerCategoryCommand } from './commands/category'
 import { registerDebtCommand } from './commands/debt'
 import { registerExportCommand } from './commands/export'
 import { registerFintualCommand } from './commands/fintual'
+import { registerInboxCommand } from './commands/inbox'
 import { registerKeyCommand } from './commands/key'
 import { registerListCommand } from './commands/list'
 import { registerLoginCommand } from './commands/login'
 import { registerPatrimonioCommand } from './commands/patrimonio'
 import { registerReceivableCommand } from './commands/receivable'
 import { registerRecurringCommand } from './commands/recurring'
+import { registerRulesCommand } from './commands/rules'
 import { registerSnapshotCommand } from './commands/snapshot'
+import { registerSyncCommand } from './commands/sync'
 import { registerSpaCommand } from './commands/spa'
 import { registerTransferCommand } from './commands/transfer'
 import { registerUndoCommand } from './commands/undo'
@@ -33,7 +37,11 @@ registerLoginCommand(program)
 registerKeyCommand(program)
 registerAddCommand(program)
 registerBalanceCommand(program)
+registerBucketsCommand(program)
+registerInboxCommand(program)
 registerListCommand(program)
+registerRulesCommand(program)
+registerSyncCommand(program)
 registerTransferCommand(program)
 registerUndoCommand(program)
 registerAccountCommand(program)

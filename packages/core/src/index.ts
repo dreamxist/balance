@@ -5,6 +5,28 @@ export { createAccount, getAccounts, archiveAccount, renameAccount, updateAccoun
 export { createTransaction, undoTransaction, createOpeningBalance, getTransactions, getMonthlySummary } from './transactions'
 export { getReconciliationStatus } from './reconciliation'
 export type { ReconciliationStatus } from './reconciliation'
+export { getMonthlyBuckets } from './buckets'
+export type { MonthlyBuckets, MonthlyBucketsOptions } from './buckets'
+export {
+  getUncategorizedTransactions,
+  getEmailMovements,
+  setTransactionCategory,
+  getCategorizationRules,
+  createCategorizationRule,
+  deleteCategorizationRule,
+  discardEmailMovement,
+  promoteEmailMovements,
+  getSyncState,
+} from './inbox'
+export type {
+  UncategorizedTransaction,
+  EmailMovement,
+  CategorizationRule,
+  PromoteSummary,
+  SyncState,
+} from './inbox'
+export { triggerGmailSync } from './sync'
+export type { GmailSyncSummary } from './sync'
 export {
   getRecurringStatus,
   processDueRecurringCharges,
@@ -26,8 +48,6 @@ export type {
 } from './recurring'
 export { usdToClp, parseUsdAmount } from './money'
 export { getCategories, createSubcategory, renameCategory, deleteCategory } from './categories'
-export { getMonthlyBreakdown, aggregateBreakdown, categoryRoot } from './breakdown'
-export type { MonthlyBreakdown, CategoryRoot, BreakdownRow } from './breakdown'
 export { createInstallmentPurchase, payDebtInstallment, payOffDebt, getActiveDebts, archiveDebt } from './debts'
 export { createTransfer, createInterEntityTransfer, receivePayment } from './transfers'
 export { createSnapshot, getSnapshotHistory } from './snapshots'

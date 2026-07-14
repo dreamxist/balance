@@ -1,22 +1,32 @@
+import type { MonthlyBuckets } from '@balance/core'
 import { cn } from '@/lib/utils'
 import { formatMoney } from '@/lib/format'
+import { computeDistribution } from '@/lib/distribution'
 import { SkeletonCard } from '@/components/ui/skeleton'
 import { AnimatedNumber } from '@/components/ui/animated-number'
 
-interface MonthlyBreakdown {
-  income: number
-  necesidades: number
-  consumo: number
-  ahorro: number
-  delta: number
-}
-
 interface PatrimonyHeroProps {
   position: number
-  monthly?: MonthlyBreakdown
+  monthly?: MonthlyBuckets
   isLoading: boolean
   className?: string
 }
+
+const SEGMENT_COLORS = {
+  necesidades: 'bg-blue-500',
+  consumo: 'bg-orange-500',
+  ahorro: 'bg-violet-500',
+  por_categorizar: 'bg-zinc-400',
+  disponible: 'bg-emerald-500',
+} as const
+
+const SEGMENT_LABELS = {
+  necesidades: 'Necesidades',
+  consumo: 'Consumo',
+  ahorro: 'Ahorro',
+  por_categorizar: 'Por categorizar',
+  disponible: 'Disponible',
+} as const
 
 export function PatrimonyHero({ position, monthly, isLoading, className }: PatrimonyHeroProps) {
   if (isLoading) {
@@ -24,17 +34,8 @@ export function PatrimonyHero({ position, monthly, isLoading, className }: Patri
   }
 
   const income = monthly?.income ?? 0
-  const necesidades = monthly?.necesidades ?? 0
-  const consumo = monthly?.consumo ?? 0
-  const ahorro = monthly?.ahorro ?? 0
-  const delta = monthly?.delta ?? 0
-
-  const gastado = necesidades + consumo + ahorro
-  const total = gastado + Math.max(delta, 0)
-  const pctNecesidades = total > 0 ? Math.round((necesidades / total) * 100) : 0
-  const pctConsumo = total > 0 ? Math.round((consumo / total) * 100) : 0
-  const pctAhorro = total > 0 ? Math.round((ahorro / total) * 100) : 0
-  const pctDelta = total > 0 ? Math.round((Math.max(delta, 0) / total) * 100) : 0
+  const disponible = monthly?.disponible ?? 0
+  const segments = monthly ? computeDistribution(monthly) : []
 
   return (
     <div
@@ -50,9 +51,9 @@ export function PatrimonyHero({ position, monthly, isLoading, className }: Patri
         {income > 0 && (
           <span className={cn(
             'text-sm font-medium',
-            delta >= 0 ? 'text-emerald-500' : 'text-red-500',
+            disponible >= 0 ? 'text-emerald-500' : 'text-red-500',
           )}>
-            {formatMoney(delta)} disponible
+            {formatMoney(disponible)} disponible
           </span>
         )}
       </div>
@@ -60,36 +61,27 @@ export function PatrimonyHero({ position, monthly, isLoading, className }: Patri
       {income > 0 && (
         <div className="mt-4 space-y-2">
           <div className="flex h-2 overflow-hidden rounded-full bg-muted">
-            {pctNecesidades > 0 && (
-              <div className="bg-blue-500" style={{ width: `${pctNecesidades}%` }} />
-            )}
-            {pctConsumo > 0 && (
-              <div className="bg-orange-500" style={{ width: `${pctConsumo}%` }} />
-            )}
-            {pctAhorro > 0 && (
-              <div className="bg-violet-500" style={{ width: `${pctAhorro}%` }} />
-            )}
-            {pctDelta > 0 && (
-              <div className="bg-emerald-500" style={{ width: `${pctDelta}%` }} />
-            )}
+            {segments.map((s) => (
+              s.pct > 0 && (
+                <div key={s.key} className={SEGMENT_COLORS[s.key]} style={{ width: `${s.pct}%` }} />
+              )
+            ))}
           </div>
           <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
-            <span className="flex items-center gap-1.5">
-              <span className="size-2 rounded-full bg-blue-500" />
-              Necesidades {formatMoney(necesidades)} · {pctNecesidades}%
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="size-2 rounded-full bg-orange-500" />
-              Consumo {formatMoney(consumo)} · {pctConsumo}%
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="size-2 rounded-full bg-violet-500" />
-              Ahorro {formatMoney(ahorro)} · {pctAhorro}%
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="size-2 rounded-full bg-emerald-500" />
-              Disponible {formatMoney(delta)} · {pctDelta}%
-            </span>
+            {segments.map((s) => {
+              // Hide the neutral bucket when empty; the rest stay as fixed legend
+              if (s.key === 'por_categorizar' && s.amount === 0) return null
+              const isNegativeDisponible = s.key === 'disponible' && s.amount < 0
+              return (
+                <span key={s.key} className="flex items-center gap-1.5">
+                  <span className={cn('size-2 rounded-full', SEGMENT_COLORS[s.key])} />
+                  <span className={cn(isNegativeDisponible && 'text-red-500')}>
+                    {SEGMENT_LABELS[s.key]} {formatMoney(s.amount)}
+                    {!isNegativeDisponible && ` · ${s.pct}%`}
+                  </span>
+                </span>
+              )
+            })}
           </div>
         </div>
       )}
