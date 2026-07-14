@@ -38,6 +38,7 @@ export interface ParsedMovement {
   counterparty: string | null
   merchant: string | null
   account_hint: string | null
+  dest_hint: string | null
   email_date: string
   bank_tx_id: string | null
   raw_snippet: string
@@ -114,6 +115,7 @@ function base(
     counterparty: null,
     merchant: null,
     account_hint: null,
+    dest_hint: null,
     email_date: email.date,
     bank_tx_id: null,
     raw_snippet: stripHtml(email.body).slice(0, 500),
@@ -204,6 +206,9 @@ export function parseBancoChileTransferOut(email: RawEmail): ParsedMovement | nu
       accountHint(text, /desde su cuenta corriente\s*(?:n[^\d$]{0,15})?([\d-]{6,})/i)
       ?? accountHint(text, /cuenta\s+(?:de\s+)?origen[^\d$]{0,25}([\d-]{6,})/i)
       ?? accountHint(text),
+    // "Datos del Destinatario … Rut … Cuenta 5566778899 Banco …" — proves an
+    // own-account transfer when the number matches one of the user's accounts.
+    dest_hint: accountHint(text, /destinatario.{0,120}?rut\s*:?\s*[\d.kK-]+\s*cuenta\s*:?\s*([\d-]{4,})/i),
     bank_tx_id: matchGroup(text, /\b(TEF_\w+)\b/),
   })
 }
@@ -268,6 +273,7 @@ export function parseBiceTransferOut(email: RawEmail): ParsedMovement | null {
     ),
     account_hint: accountHint(text, /cuenta de origen.{0,80}?mero de cuenta\s*([\d-]{4,})/i)
       ?? accountHint(text),
+    dest_hint: accountHint(text, /cuenta de destino.{0,120}?mero de cuenta\s*([\d-]{4,})/i),
   })
 }
 
@@ -328,6 +334,7 @@ export function parseMpTransferOut(email: RawEmail): ParsedMovement | null {
       /(?:para|a)\s+([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ ]{3,}?)(?=\s*(?:RUT|rut|banco|cuenta|monto|\$|\.|$))/,
     ),
     account_hint: 'mercadopago',
+    dest_hint: accountHint(text, /n[úu]mero de cuenta:?\s*([\d-]{4,})/i),
   })
 }
 

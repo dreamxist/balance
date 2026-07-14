@@ -111,7 +111,16 @@ Deno.serve(async (req) => {
     return new Response('Unauthorized', { status: 401 })
   }
 
-  const userId = isCronCall ? Deno.env.get('GMAIL_USER_ID') ?? null : authenticatedUserId
+  // There is exactly one mailbox (one GMAIL_REFRESH_TOKEN). Only its owner may
+  // sync it: any other authenticated user would otherwise import the owner's
+  // bank movements into their own ledger. Fail closed when the owner is unset.
+  const gmailOwner = Deno.env.get('GMAIL_USER_ID') ?? null
+  if (!isCronCall && authenticatedUserId !== gmailOwner) {
+    console.error(`gmail-sync: JWT user ${authenticatedUserId} is not the mailbox owner`)
+    return new Response('Forbidden: not the mailbox owner', { status: 403 })
+  }
+
+  const userId = isCronCall ? gmailOwner : authenticatedUserId
   if (!userId) {
     return Response.json(
       { error: 'GMAIL_USER_ID secret is required for cron calls' },
@@ -153,10 +162,9 @@ Deno.serve(async (req) => {
   try {
     accessToken = await refreshAccessToken()
   } catch (err) {
-    return Response.json(
-      { error: err instanceof Error ? err.message : String(err) },
-      { status: 502 },
-    )
+    const message = err instanceof Error ? err.message : String(err)
+    console.error(`gmail-sync: token refresh failed: ${message}`)
+    return Response.json({ error: message }, { status: 502 })
   }
 
   const query = buildGmailQuery(since.getTime() / 1000)
@@ -164,10 +172,9 @@ Deno.serve(async (req) => {
   try {
     messageIds = await listMessageIds(accessToken, query)
   } catch (err) {
-    return Response.json(
-      { error: err instanceof Error ? err.message : String(err) },
-      { status: 502 },
-    )
+    const message = err instanceof Error ? err.message : String(err)
+    console.error(`gmail-sync: message list failed: ${message}`)
+    return Response.json({ error: message }, { status: 502 })
   }
 
   // Skip messages already staged (any status) — cheap dedup before fetching
@@ -204,21 +211,23 @@ Deno.serve(async (req) => {
       continue
     }
 
-    let row: Partial<ParsedMovement> & { status: string; error_detail?: string }
+    let row: Partial<ParsedMovement> & { source: string; status: string; error_detail?: string }
     if (result === null) {
+      // Known sender but unparseable — either a routed subject whose body
+      // changed, or a subject we don't recognize at all (the bank may have
+      // reworded a real notification). Both stage as 'error' for review;
+      // silently dropping them would lose movements forever once the
+      // watermark advances.
       const source = sourceForEmail(email)
-      if (source === null) {
-        // Known sender but no known-subject route: marketing variants — skip
-        ignored++
-        continue
-      }
       row = {
         gmail_message_id: email.id,
-        source,
+        source: source ?? 'unknown',
         email_date: email.date,
         raw_snippet: email.body.slice(0, 500),
         status: 'error',
-        error_detail: 'parser could not extract fields',
+        error_detail: source === null
+          ? `unrecognized subject at known sender: "${email.subject.slice(0, 120)}"`
+          : 'parser could not extract fields',
       }
       stagedErrors++
     } else {
@@ -241,17 +250,37 @@ Deno.serve(async (req) => {
     { p_user_id: userId, p_usd_rate: usdRate },
   )
   if (promoteError) {
+    console.error(`gmail-sync: promote failed: ${promoteError.message}`)
     return Response.json(
       { error: `promote failed: ${promoteError.message}`, fetched, parsed },
       { status: 500 },
     )
   }
 
-  await supabase.from('sync_state').upsert({
-    user_id: userId,
-    gmail_watermark: runStartedAt.toISOString(),
-    updated_at: runStartedAt.toISOString(),
-  })
+  // Only advance the watermark on a clean run. A message that failed to fetch
+  // or stage is NOT in email_movements; advancing past it would exclude it
+  // from every future `after:` query — silent, permanent loss. Keeping the old
+  // watermark makes the next run re-list the window (cheap: already-staged
+  // ids are skipped via the dedup set) and retry only what failed.
+  if (failures.length === 0) {
+    await supabase.from('sync_state').upsert({
+      user_id: userId,
+      gmail_watermark: runStartedAt.toISOString(),
+      updated_at: runStartedAt.toISOString(),
+    })
+  } else {
+    for (const f of failures) console.error(`gmail-sync: ${f}`)
+    console.error(
+      `gmail-sync: ${failures.length} message(s) failed; watermark kept at ${since.toISOString()} for retry`,
+    )
+  }
+
+  // Cron discards the response body — the log line is the only trace.
+  console.log(
+    `gmail-sync: fetched=${fetched} parsed=${parsed} ignored=${ignored} staged_errors=${stagedErrors} ` +
+    `promoted=${promoteResult?.promoted ?? 0} pending=${promoteResult?.pending ?? 0} ` +
+    `errors=${promoteResult?.errors ?? 0} failures=${failures.length}`,
+  )
 
   return Response.json({
     mode: isCronCall ? 'cron' : 'user',

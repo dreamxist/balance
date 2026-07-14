@@ -126,6 +126,21 @@ Deno.test('bancochile_transfer_out parses prose format with origin account', () 
   assertEquals(p.account_hint, '1122334455')
   assertEquals(p.counterparty, 'Medio De Pago Fintoc')
   assertEquals(p.bank_tx_id, 'TEF_20260704_112233')
+  assertEquals(p.dest_hint, null)
+})
+
+Deno.test('bancochile_transfer_out extracts the destination account (dest_hint)', () => {
+  const p = parsed(email({
+    from: 'serviciodetransferencias@bancochile.cl',
+    subject: 'Transferencia a Terceros',
+    body: `Te informamos que has realizado una Transferencia a terceros:
+      Origen Cuenta Corriente 1122334455 Datos del Destinatario
+      Nombre Juan Perez Soto Rut 12.345.678-5 Cuenta 5566778899
+      Banco Banco Ejemplo Monto $80.000 TEF_20260709_445566`,
+  }))
+  assertEquals(p.source, 'bancochile_transfer_out')
+  assertEquals(p.account_hint, '1122334455')
+  assertEquals(p.dest_hint, '5566778899')
 })
 
 Deno.test('bancochile_transfer_in parses incoming transfer', () => {
@@ -159,6 +174,7 @@ Deno.test('bice_transfer_out hints the ORIGIN account', () => {
   assertEquals(p.amount, 71648)
   assertEquals(p.account_hint, '7654321')
   assertEquals(p.counterparty, 'Juan Perez Soto')
+  assertEquals(p.dest_hint, '9988776655')
 })
 
 Deno.test('bice_transfer_in hints the DESTINATION account', () => {
@@ -195,11 +211,14 @@ Deno.test('mp_transfer_out parses sent transfer', () => {
   const p = parsed(email({
     from: 'info@mercadopago.com',
     subject: 'Tu transferencia fue enviada',
-    body: '<p>Enviaste $25.990 para ANA MARIA REYES Banco Santander cuenta N° 001122334455.</p>',
+    body: `<p>Ya enviamos tu transferencia de $ 25.990 Datos del beneficiario
+      Nombre y apellido: ANA MARIA REYES Entidad: Banco Santander
+      Número de cuenta: 001122334455</p>`,
   }))
   assertEquals(p.source, 'mp_transfer_out')
   assertEquals(p.amount, 25990)
   assertEquals(p.account_hint, 'mercadopago')
+  assertEquals(p.dest_hint, '1122334455')
 })
 
 Deno.test('tenpo_transfer_in hints the destination account', () => {

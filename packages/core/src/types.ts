@@ -279,6 +279,7 @@ export type Database = {
           counterparty: string | null
           created_at: string
           currency: string | null
+          dest_hint: string | null
           email_date: string | null
           error_detail: string | null
           gmail_message_id: string
@@ -297,6 +298,7 @@ export type Database = {
           counterparty?: string | null
           created_at?: string
           currency?: string | null
+          dest_hint?: string | null
           email_date?: string | null
           error_detail?: string | null
           gmail_message_id: string
@@ -315,6 +317,7 @@ export type Database = {
           counterparty?: string | null
           created_at?: string
           currency?: string | null
+          dest_hint?: string | null
           email_date?: string | null
           error_detail?: string | null
           gmail_message_id?: string
@@ -947,6 +950,7 @@ export type Database = {
         }
         Returns: Json
       }
+      _bucket_root: { Args: { p_category: string }; Returns: string }
       _create_debt: {
         Args: {
           p_account_id: string
@@ -1022,7 +1026,7 @@ export type Database = {
         }
       }
       _match_account_by_hint: {
-        Args: { p_hint: string; p_user_id: string }
+        Args: { p_currency?: string; p_hint: string; p_user_id: string }
         Returns: {
           balance: number
           created_at: string
