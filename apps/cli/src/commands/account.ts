@@ -124,7 +124,7 @@ function registerCreate(group: Command): void {
       }
 
       let balance = 0
-      if (opts.balance) {
+      if (opts.balance && opts.balance !== '0') {
         try {
           balance = parseAmount(opts.balance)
         } catch (err) {
@@ -209,6 +209,23 @@ interface BalanceOptions {
   json?: boolean
 }
 
+function parseBalanceTarget(raw: string): number {
+  const trimmed = raw.trim()
+  const sign = trimmed.startsWith('-') ? -1 : 1
+  const body = trimmed.replace(/^[-+]/, '')
+  let digits: string
+  if (/^\d+$/.test(body)) {
+    digits = body
+  } else if (/^\d{1,3}([.,\s_]\d{3})+$/.test(body)) {
+    digits = body.replace(/[.,\s_]/g, '')
+  } else {
+    throw new Error(`invalid balance: ${raw}`)
+  }
+  const n = Number.parseInt(digits, 10)
+  if (!Number.isFinite(n)) throw new Error(`invalid balance: ${raw}`)
+  return sign * n
+}
+
 function registerBalance(group: Command): void {
   group
     .command('balance <nameOrId> <newBalance>')
@@ -217,7 +234,7 @@ function registerBalance(group: Command): void {
     .action(async (ref: string, newBalanceRaw: string, opts: BalanceOptions) => {
       let newBalance: number
       try {
-        newBalance = parseAmount(newBalanceRaw)
+        newBalance = parseBalanceTarget(newBalanceRaw)
       } catch (err) {
         fail((err as Error).message)
       }
