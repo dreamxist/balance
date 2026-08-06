@@ -28,3 +28,6 @@ HANDOFF.md
 *.handoff.md
 bal-session.json
 bun.lock
+
+# Internal planning docs — cifras reales, infra e identificadores de nube
+docs/prd-*.md
