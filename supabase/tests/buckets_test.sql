@@ -54,8 +54,7 @@ values
    'expense', 25000, 'Cine', 'consumo.entretencion', 'personal', '2026-03-13'),
   ('b1000000-0000-0000-0000-000000000001', 'b2000000-0000-0000-0000-000000000001',
    'adjustment', 25000, 'Undo: Cine', 'consumo.entretencion', 'personal', '2026-03-13'),
-  -- ahorro: recorded as an expense with an ahorro-rooted category (the user's
-  -- real convention), 480.000
+  -- ahorro: recorded as an expense with an ahorro-rooted category, 480.000
   ('b1000000-0000-0000-0000-000000000001', 'b2000000-0000-0000-0000-000000000001',
    'expense', 480000, 'Ahorro marzo - Fintual', 'ahorro', 'personal', '2026-03-20'),
   -- por_categorizar: NULL 40.000 + unknown prefix 10.000 = 50.000

@@ -3,12 +3,12 @@ import { getMonthlyBuckets } from './buckets'
 import type { MonthlyBuckets } from './buckets'
 
 const SAMPLE: MonthlyBuckets = {
-  income: 1200000,
-  necesidades: 500000,
-  consumo: 50000,
+  income: 980000,
+  necesidades: 310000,
+  consumo: 70000,
   ahorro: 480000,
-  por_categorizar: 50000,
-  disponible: 50000,
+  por_categorizar: 40000,
+  disponible: 560000,
   month: '2026-03',
 }
 

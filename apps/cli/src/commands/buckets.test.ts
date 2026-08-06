@@ -3,12 +3,12 @@ import { isMonth, renderBuckets } from './buckets'
 import type { MonthlyBuckets } from '@balance/core'
 
 const SAMPLE: MonthlyBuckets = {
-  income: 1200000,
-  necesidades: 500000,
-  consumo: 50000,
+  income: 980000,
+  necesidades: 310000,
+  consumo: 70000,
   ahorro: 480000,
-  por_categorizar: 50000,
-  disponible: 50000,
+  por_categorizar: 40000,
+  disponible: 560000,
   month: '2026-03',
 }
 
@@ -32,18 +32,18 @@ describe('renderBuckets', () => {
   it('renders every bucket with its amount', () => {
     const out = renderBuckets(SAMPLE, 'personal')
     expect(out).toContain('Buckets 2026-03 (personal)')
-    expect(out).toMatch(/Ingresos.*1\.200\.000/)
-    expect(out).toMatch(/Necesidades.*500\.000/)
-    expect(out).toMatch(/Consumo.*50\.000/)
-    expect(out).toMatch(/Ahorro.*550\.000/)
-    expect(out).toMatch(/Por categorizar.*50\.000/)
-    expect(out).toMatch(/Disponible.*50\.000/)
+    expect(out).toMatch(/Ingresos.*980\.000/)
+    expect(out).toMatch(/Necesidades.*310\.000/)
+    expect(out).toMatch(/Consumo.*70\.000/)
+    expect(out).toMatch(/Ahorro.*480\.000/)
+    expect(out).toMatch(/Por categorizar.*40\.000/)
+    expect(out).toMatch(/Disponible.*560\.000/)
   })
 
   it('renders negative disponible with minus sign', () => {
     const out = renderBuckets({ ...SAMPLE, disponible: -123456 }, 'personal')
     // es-CL currency puts the sign after the symbol: $-123.456
-    expect(out).toMatch(/Disponible.*\$-504\.726/)
+    expect(out).toMatch(/Disponible.*\$-123\.456/)
   })
 
   it('shows the requested entity', () => {
