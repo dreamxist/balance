@@ -1,5 +1,5 @@
 begin;
-select plan(17);
+select plan(20);
 
 -- ============================================================
 -- Setup: two users, accounts (incl. off-budget), fixed month
@@ -203,6 +203,51 @@ select is(
 -- ============================================================
 select is(_bucket_root('necesidad.salud'), 'necesidad', 'tree ids resolve by head');
 select is(_bucket_root('Otro ingreso'), 'ingreso', 'legacy Otro ingreso maps to ingreso');
+
+-- ============================================================
+-- Installments: the purchase stays out of buckets; dated payments count
+-- ============================================================
+insert into accounts (id, user_id, name, type, subtype, entity, on_budget)
+values (
+  'b2000000-0000-0000-0000-000000000005',
+  'b1000000-0000-0000-0000-000000000001',
+  'Buckets TC', 'liability', 'credit_card', 'personal', true
+);
+
+select create_installment_purchase(
+  90000, 6, 'consumo.ropa',
+  'b2000000-0000-0000-0000-000000000005',
+  'Zapatillas test', '2026-03-01', '2026-03-01'
+);
+
+select pay_debt_installment(
+  (select id from debts where description = 'Zapatillas test'),
+  '2026-03-01'
+);
+
+select pay_debt_installment(
+  (select id from debts where description = 'Zapatillas test'),
+  '2026-04-01'
+);
+
+select is(
+  (select (get_monthly_buckets('2026-03-15'::date)->>'consumo')::bigint),
+  65000::bigint,
+  'installment purchase contributes only its first 15.000 payment to March consumo'
+);
+
+select is(
+  (select (get_monthly_buckets('2026-04-15'::date)->>'consumo')::bigint),
+  15000::bigint,
+  'second installment contributes 15.000 to April consumo'
+);
+
+select is(
+  (select count(*) from transactions
+    where description like 'Zapatillas test%' and type = 'expense'),
+  1::bigint,
+  'installment purchase retains one parent expense for reconciliation'
+);
 
 -- ============================================================
 -- RLS: user B only sees their own numbers

@@ -105,6 +105,11 @@ async function processDebtsForUser(
       continue
     }
 
+    if (!debt.next_payment_date || debt.next_payment_date > ctx.todayStr) {
+      results.push(`[${tag}] Cuota ${debt.description}: not due yet`)
+      continue
+    }
+
     // pay_debt_installment derives user_id from the debt row. We've already
     // validated debt.user_id === userId above.
     const { error: payError } = await ctx.supabase.rpc('pay_debt_installment', {
@@ -168,7 +173,6 @@ Deno.serve(async (req) => {
   }
 
   const results: ChargeResult[] = []
-  const DEBT_DAY = 17
 
   // Determine which user_ids we will process. In cron mode iterate all users
   // that have at least one active recurring_charge or active debt. In user JWT
@@ -190,18 +194,16 @@ Deno.serve(async (req) => {
       if (row.user_id) userIdSet.add(row.user_id as string)
     }
 
-    if (currentDay === DEBT_DAY) {
-      const { data: debtUsers, error: debtUsersErr } = await supabase
-        .from('debts')
-        .select('user_id')
-        .eq('status', 'active')
+    const { data: debtUsers, error: debtUsersErr } = await supabase
+      .from('debts')
+      .select('user_id')
+      .eq('status', 'active')
 
-      if (debtUsersErr) {
-        return Response.json({ error: debtUsersErr.message }, { status: 500 })
-      }
-      for (const row of debtUsers ?? []) {
-        if (row.user_id) userIdSet.add(row.user_id as string)
-      }
+    if (debtUsersErr) {
+      return Response.json({ error: debtUsersErr.message }, { status: 500 })
+    }
+    for (const row of debtUsers ?? []) {
+      if (row.user_id) userIdSet.add(row.user_id as string)
     }
 
     userIds = [...userIdSet]
@@ -215,10 +217,8 @@ Deno.serve(async (req) => {
       const chargeResults = await processChargesForUser(ctx, userId)
       results.push(...chargeResults)
 
-      if (currentDay === DEBT_DAY) {
-        const debtResults = await processDebtsForUser(ctx, userId)
-        results.push(...debtResults)
-      }
+      const debtResults = await processDebtsForUser(ctx, userId)
+      results.push(...debtResults)
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
       console.error(`[${tag}] processing failed:`, message)
