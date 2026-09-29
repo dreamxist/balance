@@ -154,7 +154,7 @@ export function renderSyncIssues(issues: SyncHealthIssue[]): string[] {
       ? `último sync OK ${issue.lastSuccessAt.slice(0, 10)} (hace ${issue.hoursSinceSuccess} h)`
       : 'nunca sincronizó OK'
     lines.push(indent(`${ui.warn('●')} ${ui.strong(SOURCE_LABEL[issue.source])} ${ui.dim(since)}`))
-    if (issue.error) lines.push(indent(`  ${ui.dim((issue.error.split('\n')[0] ?? '').slice(0, 160))}`))
+    if (issue.error) lines.push(indent(`  ${ui.dim(issue.error.replace(/\s+/g, ' ').slice(0, 160))}`))
   }
   lines.push(blank())
   return lines
