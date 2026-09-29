@@ -1,5 +1,10 @@
 import type { Command } from 'commander'
-import { triggerGmailSync, type GmailSyncSummary } from '@balance/core'
+import {
+  triggerFintocSync,
+  triggerGmailSync,
+  type FintocSyncSummary,
+  type GmailSyncSummary,
+} from '@balance/core'
 import { getAuthedClient } from '../lib/client'
 import { fail } from '../lib/exit'
 import { isIsoDate } from '../lib/period'
@@ -26,11 +31,29 @@ export function renderSyncSummary(summary: GmailSyncSummary): string {
   return lines.join('\n') + '\n'
 }
 
+export function renderFintocSummary(summary: FintocSyncSummary): string {
+  if (!summary.configured) return ''
+  const lines = [
+    `Fintoc desde ${summary.since ?? '?'}`,
+    `  movimientos nuevos ${summary.fetched ?? 0}`,
+    `  ignorados          ${summary.ignored ?? 0}`,
+    `  promovidos         ${summary.promoted ?? 0}`,
+    `  errores            ${summary.errors ?? 0}`,
+  ]
+  if ((summary.skipped_existing ?? 0) > 0) {
+    lines.push(`  duplicados         ${summary.skipped_existing}`)
+  }
+  for (const failure of summary.failures ?? []) {
+    lines.push(`  ! ${failure}`)
+  }
+  return lines.join('\n') + '\n'
+}
+
 export function registerSyncCommand(program: Command): void {
   program
     .command('sync')
-    .description('Fetch bank emails from Gmail and promote them (gmail-sync)')
-    .option('--since <YYYY-MM-DD>', 'backfill from this date (overrides watermark)')
+    .description('Fetch bank emails (gmail-sync) and bank movements (fintoc-sync), then promote them')
+    .option('--since <YYYY-MM-DD>', 'backfill Gmail from this date (overrides watermark)')
     .option('--json', 'output JSON')
     .action(async (opts: { since?: string; json?: boolean }) => {
       if (opts.since && !isIsoDate(opts.since)) {
@@ -38,10 +61,24 @@ export function registerSyncCommand(program: Command): void {
       }
       const client = await getAuthedClient()
       const summary = await triggerGmailSync(client, { since: opts.since })
-      if (opts.json) {
-        process.stdout.write(JSON.stringify(summary) + '\n')
-        return
+
+      let fintoc: FintocSyncSummary | null = null
+      let fintocError: string | null = null
+      try {
+        fintoc = await triggerFintocSync(client)
+      } catch (err) {
+        fintocError = err instanceof Error ? err.message : String(err)
       }
-      process.stdout.write(renderSyncSummary(summary))
+
+      if (opts.json) {
+        process.stdout.write(JSON.stringify({ ...summary, fintoc, fintoc_error: fintocError }) + '\n')
+      } else {
+        process.stdout.write(renderSyncSummary(summary))
+        if (fintoc) process.stdout.write(renderFintocSummary(fintoc))
+      }
+      if (fintocError) {
+        process.stderr.write(`Fintoc: ${fintocError}\n`)
+        process.exitCode = 1
+      }
     })
 }

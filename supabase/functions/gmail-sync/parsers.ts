@@ -454,6 +454,31 @@ export function sourceForEmail(email: RawEmail): EmailSource | null {
   return null
 }
 
+// Banco de Chile checking-account notifications. fintoc-sync reads that
+// account straight from the bank from FINTOC_CUTOVER_DATE on; card purchases
+// (bancochile_tc) never show up there and stay with Gmail.
+const FINTOC_OWNED_SOURCES: ReadonlySet<EmailSource> = new Set([
+  'bancochile_pago',
+  'bancochile_transfer_out',
+  'bancochile_transfer_in',
+  'bancochile_pago_tc',
+])
+
+/** Chile-local calendar date (YYYY-MM-DD) of an ISO timestamp. */
+export function santiagoDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-CA', { timeZone: 'America/Santiago' })
+}
+
+/** True when fintoc-sync owns this email's movement (skip it here). */
+export function isOwnedByFintoc(
+  source: EmailSource | null,
+  emailDate: string,
+  cutover: string | null,
+): boolean {
+  if (!cutover || source === null || !FINTOC_OWNED_SOURCES.has(source)) return false
+  return santiagoDate(emailDate) >= cutover
+}
+
 /**
  * Route a raw email to its parser.
  * - Returns ParsedMovement when parsed.

@@ -5,10 +5,18 @@
 // makes a caller cron) or a user JWT for manual `bal sync`. Cron mode resolves
 // the target user from GMAIL_USER_ID (single-user v1); JWT mode uses the
 // token subject. Gmail OAuth uses a refresh token minted once by
-// scripts/gmail-auth.ts (scope gmail.readonly).
+// scripts/gmail-auth.ts (scope gmail.readonly). With FINTOC_CUTOVER_DATE set,
+// Banco de Chile checking-account emails from that day on belong to
+// fintoc-sync and are skipped here.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { parseEmail, sourceForEmail, type ParsedMovement, type RawEmail } from './parsers.ts'
+import {
+  isOwnedByFintoc,
+  parseEmail,
+  sourceForEmail,
+  type ParsedMovement,
+  type RawEmail,
+} from './parsers.ts'
 import { buildGmailQuery, extractBody, headerValue, type GmailPayload } from './gmail.ts'
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!
@@ -188,6 +196,8 @@ Deno.serve(async (req) => {
     for (const row of existing ?? []) seen.add(row.gmail_message_id as string)
   }
 
+  const fintocCutover = Deno.env.get('FINTOC_CUTOVER_DATE') || null
+
   let fetched = 0
   let parsed = 0
   let ignored = 0
@@ -224,6 +234,10 @@ Deno.serve(async (req) => {
 
     const result = parseEmail(email)
     if (result === 'ignore') {
+      ignored++
+      continue
+    }
+    if (isOwnedByFintoc(sourceForEmail(email), email.date, fintocCutover)) {
       ignored++
       continue
     }

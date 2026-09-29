@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { renderInboxList } from './inbox'
 import { renderRules } from './rules'
-import { renderSyncSummary } from './sync'
+import { renderFintocSummary, renderSyncSummary } from './sync'
 import type { CategorizationRule, EmailMovement, GmailSyncSummary, UncategorizedTransaction } from '@balance/core'
 
 function tx(partial: Partial<UncategorizedTransaction>): UncategorizedTransaction {
@@ -77,5 +77,23 @@ describe('renderSyncSummary', () => {
     const out = renderSyncSummary({ ...summary, skipped_existing: 0, usd_rate: 912.5, failures: [] })
     expect(out).not.toContain('duplicados')
     expect(out).not.toContain('sin tipo de cambio')
+  })
+})
+
+describe('renderFintocSummary', () => {
+  it('renders nothing when Fintoc is not configured', () => {
+    expect(renderFintocSummary({ configured: false })).toBe('')
+  })
+
+  it('renders counters, duplicates and failures', () => {
+    const out = renderFintocSummary({
+      configured: true, since: '2026-09-30', fetched: 7, ignored: 1,
+      promoted: 5, errors: 1, skipped_existing: 1, failures: ['stage mov_x: boom'],
+    })
+    expect(out).toContain('Fintoc desde 2026-09-30')
+    expect(out).toMatch(/movimientos nuevos\s+7/)
+    expect(out).toMatch(/promovidos\s+5/)
+    expect(out).toMatch(/duplicados\s+1/)
+    expect(out).toContain('! stage mov_x: boom')
   })
 })

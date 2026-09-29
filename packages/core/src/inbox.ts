@@ -115,6 +115,7 @@ export async function promoteEmailMovements(
 export interface SyncState {
   user_id: string
   gmail_watermark: string | null
+  fintoc_watermark: string | null
   updated_at: string
 }
 
