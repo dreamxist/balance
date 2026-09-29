@@ -19,6 +19,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { mapMovement, stagedIdFor, type FintocMovement } from './mapper.ts'
+import { recordSyncOutcome } from '../_shared/sync-health.ts'
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -132,6 +133,7 @@ Deno.serve(async (req) => {
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     console.error(`fintoc-sync: ${message}`)
+    await recordSyncOutcome(supabase, userId, 'fintoc', message)
     return Response.json({ configured: true, error: message }, { status: 502 })
   }
   if (link.status !== 'active') {
@@ -139,6 +141,7 @@ Deno.serve(async (req) => {
     // re-authenticate. Nothing new will arrive until the Link is reconnected.
     const message = `Fintoc link status is ${link.status}: reconnect the bank in Fintoc`
     console.error(`fintoc-sync: ${message}`)
+    await recordSyncOutcome(supabase, userId, 'fintoc', message)
     return Response.json({ configured: true, link_status: link.status, error: message }, { status: 409 })
   }
 
@@ -164,6 +167,7 @@ Deno.serve(async (req) => {
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     console.error(`fintoc-sync: ${message}`)
+    await recordSyncOutcome(supabase, userId, 'fintoc', message)
     return Response.json({ configured: true, error: message }, { status: 502 })
   }
 
@@ -219,6 +223,7 @@ Deno.serve(async (req) => {
   )
   if (promoteError) {
     console.error(`fintoc-sync: promote failed: ${promoteError.message}`)
+    await recordSyncOutcome(supabase, userId, 'fintoc', `promote failed: ${promoteError.message}`)
     return Response.json(
       { configured: true, error: `promote failed: ${promoteError.message}`, fetched, staged },
       { status: 500 },
@@ -233,8 +238,10 @@ Deno.serve(async (req) => {
       fintoc_watermark: runDate,
       updated_at: new Date().toISOString(),
     })
+    await recordSyncOutcome(supabase, userId, 'fintoc', null)
   } else {
     for (const f of failures) console.error(`fintoc-sync: ${f}`)
+    await recordSyncOutcome(supabase, userId, 'fintoc', `${failures.length} failure(s): ${failures[0]}`)
   }
 
   console.log(

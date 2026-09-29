@@ -9,9 +9,13 @@ de tu Gmail 2×/día. Nada de esto bloquea el desarrollo del resto del feature.
    un proyecto (ej. `balance-gmail-sync`).
 2. **APIs & Services → Library**: habilita **Gmail API**.
 3. **APIs & Services → OAuth consent screen**:
-   - User type: **External**, publishing status **Testing** basta.
-   - Agrega tu propio correo como *test user* (`tu-correo@gmail.com`).
+   - User type: **External**.
    - Scope: `https://www.googleapis.com/auth/gmail.readonly`.
+   - **Publishing status: In production** (botón *Publish app*). No uses
+     *Testing*: ahí Google vence el refresh token a los 7 días y el sync
+     muere en silencio. Para uso personal no hace falta verificar la app;
+     al autorizar verás "Google no verificó esta app" → *Avanzado* →
+     *Ir a … (no seguro)*.
 4. **APIs & Services → Credentials → Create credentials → OAuth client ID**:
    - Application type: **Desktop app** (necesario para el loopback local).
    - Guarda el **Client ID** y el **Client Secret**.
@@ -106,3 +110,12 @@ curl -s "https://<project-ref>.supabase.co/functions/v1/gmail-sync?since=2026-07
 Backfill histórico: `?since=2026-06-01` (o `bal sync --since 2026-06-01`
 cuando exista el comando, Fase 3). El dedup por `gmail_message_id` y
 `bank_tx_id` hace que repetir el backfill sea inocuo.
+
+## Si deja de sincronizar
+
+Cada corrida registra su resultado en `sync_state`. Si Gmail (o Fintoc) lleva
+más de 36 h sin un sync exitoso o su última corrida falló, `bal balance`
+muestra un bloque **SYNC** con la fuente, la fecha del último sync OK y el
+error. Con `deleted_client` o `invalid_grant`, repite los pasos 1–3 con un
+client nuevo.
+

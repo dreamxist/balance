@@ -18,6 +18,7 @@ import {
   type RawEmail,
 } from './parsers.ts'
 import { buildGmailQuery, extractBody, headerValue, type GmailPayload } from './gmail.ts'
+import { recordSyncOutcome } from '../_shared/sync-health.ts'
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -172,6 +173,7 @@ Deno.serve(async (req) => {
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     console.error(`gmail-sync: token refresh failed: ${message}`)
+    await recordSyncOutcome(supabase, userId, 'gmail', message)
     return Response.json({ error: message }, { status: 502 })
   }
 
@@ -182,6 +184,7 @@ Deno.serve(async (req) => {
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     console.error(`gmail-sync: message list failed: ${message}`)
+    await recordSyncOutcome(supabase, userId, 'gmail', message)
     return Response.json({ error: message }, { status: 502 })
   }
 
@@ -296,6 +299,7 @@ Deno.serve(async (req) => {
   )
   if (promoteError) {
     console.error(`gmail-sync: promote failed: ${promoteError.message}`)
+    await recordSyncOutcome(supabase, userId, 'gmail', `promote failed: ${promoteError.message}`)
     return Response.json(
       { error: `promote failed: ${promoteError.message}`, fetched, parsed },
       { status: 500 },
@@ -313,7 +317,9 @@ Deno.serve(async (req) => {
       gmail_watermark: runStartedAt.toISOString(),
       updated_at: runStartedAt.toISOString(),
     })
+    await recordSyncOutcome(supabase, userId, 'gmail', null)
   } else {
+    await recordSyncOutcome(supabase, userId, 'gmail', `${failures.length} message(s) failed: ${failures[0]}`)
     for (const f of failures) console.error(`gmail-sync: ${f}`)
     console.error(
       `gmail-sync: ${failures.length} message(s) failed; watermark kept at ${since.toISOString()} for retry`,
