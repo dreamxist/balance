@@ -645,19 +645,37 @@ export type Database = {
       }
       sync_state: {
         Row: {
+          fintoc_last_error: string | null
+          fintoc_last_error_at: string | null
+          fintoc_last_success_at: string | null
           fintoc_watermark: string | null
+          gmail_last_error: string | null
+          gmail_last_error_at: string | null
+          gmail_last_success_at: string | null
           gmail_watermark: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          fintoc_last_error?: string | null
+          fintoc_last_error_at?: string | null
+          fintoc_last_success_at?: string | null
           fintoc_watermark?: string | null
+          gmail_last_error?: string | null
+          gmail_last_error_at?: string | null
+          gmail_last_success_at?: string | null
           gmail_watermark?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          fintoc_last_error?: string | null
+          fintoc_last_error_at?: string | null
+          fintoc_last_success_at?: string | null
           fintoc_watermark?: string | null
+          gmail_last_error?: string | null
+          gmail_last_error_at?: string | null
+          gmail_last_success_at?: string | null
           gmail_watermark?: string | null
           updated_at?: string
           user_id?: string

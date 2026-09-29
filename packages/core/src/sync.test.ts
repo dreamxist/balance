@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { triggerFintocSync, triggerGmailSync } from './sync'
+import { evaluateSyncHealth, triggerFintocSync, triggerGmailSync, type SyncHealthInput } from './sync'
 
 describe('triggerGmailSync', () => {
   it('invokes the edge function without since by default', async () => {
@@ -60,5 +60,61 @@ describe('triggerFintocSync', () => {
     const invoke = vi.fn().mockResolvedValue({ data: null, error })
     const client = { functions: { invoke } } as never
     await expect(triggerFintocSync(client)).rejects.toThrow('not the Fintoc link owner')
+  })
+})
+
+describe('evaluateSyncHealth', () => {
+  const now = new Date('2026-10-10T12:00:00Z')
+  const empty: SyncHealthInput = {
+    gmail_last_success_at: null, gmail_last_error: null, gmail_last_error_at: null,
+    fintoc_last_success_at: null, fintoc_last_error: null, fintoc_last_error_at: null,
+  }
+
+  it('reports nothing without state or for sources that never ran', () => {
+    expect(evaluateSyncHealth(null, now)).toEqual([])
+    expect(evaluateSyncHealth(empty, now)).toEqual([])
+  })
+
+  it('reports nothing for a recent success', () => {
+    const state = { ...empty, gmail_last_success_at: '2026-10-10T11:00:00Z' }
+    expect(evaluateSyncHealth(state, now)).toEqual([])
+  })
+
+  it('reports a failure newer than the last success, with its error', () => {
+    const state = {
+      ...empty,
+      gmail_last_success_at: '2026-10-10T00:00:00Z',
+      gmail_last_error: 'Gmail token refresh failed: 401 deleted_client',
+      gmail_last_error_at: '2026-10-10T11:00:00Z',
+    }
+    expect(evaluateSyncHealth(state, now)).toEqual([{
+      source: 'gmail',
+      lastSuccessAt: '2026-10-10T00:00:00Z',
+      error: 'Gmail token refresh failed: 401 deleted_client',
+      hoursSinceSuccess: 12,
+    }])
+  })
+
+  it('ignores an old error once a later run succeeded', () => {
+    const state = {
+      ...empty,
+      fintoc_last_success_at: '2026-10-10T11:00:00Z',
+      fintoc_last_error: 'login_required',
+      fintoc_last_error_at: '2026-10-09T23:00:00Z',
+    }
+    expect(evaluateSyncHealth(state, now)).toEqual([])
+  })
+
+  it('reports a stale source even without a recorded error', () => {
+    const state = { ...empty, fintoc_last_success_at: '2026-10-08T11:00:00Z' }
+    const [issue] = evaluateSyncHealth(state, now)
+    expect(issue).toMatchObject({ source: 'fintoc', error: null, hoursSinceSuccess: 49 })
+  })
+
+  it('reports a source that failed and never succeeded', () => {
+    const state = { ...empty, fintoc_last_error: 'boom', fintoc_last_error_at: '2026-10-10T11:00:00Z' }
+    expect(evaluateSyncHealth(state, now)).toEqual([
+      { source: 'fintoc', lastSuccessAt: null, error: 'boom', hoursSinceSuccess: null },
+    ])
   })
 })

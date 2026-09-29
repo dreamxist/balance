@@ -25,8 +25,14 @@ export type {
   PromoteSummary,
   SyncState,
 } from './inbox'
-export { triggerFintocSync, triggerGmailSync } from './sync'
-export type { FintocSyncSummary, GmailSyncSummary } from './sync'
+export { evaluateSyncHealth, SYNC_STALE_HOURS, triggerFintocSync, triggerGmailSync } from './sync'
+export type {
+  FintocSyncSummary,
+  GmailSyncSummary,
+  SyncHealthInput,
+  SyncHealthIssue,
+  SyncSourceName,
+} from './sync'
 export {
   getRecurringStatus,
   processDueRecurringCharges,

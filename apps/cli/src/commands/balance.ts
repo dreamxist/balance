@@ -1,11 +1,14 @@
 import type { Command } from 'commander'
 import {
+  evaluateSyncHealth,
   getAccounts,
   getReconciliationStatus,
   getRecurringStatus,
   getSpaDashboard,
+  getSyncState,
   payRecurringCharge,
   processDueRecurringCharges,
+  type SyncHealthIssue,
 } from '@balance/core'
 import { getAuthedClient } from '../lib/client'
 import { fail } from '../lib/exit'
@@ -57,10 +60,12 @@ export function registerBalanceCommand(program: Command): void {
         recurringSummary = await reconcileRecurringInteractive(client, scope)
       }
 
-      const [rec, accounts] = await Promise.all([
+      const [rec, accounts, syncState] = await Promise.all([
         getReconciliationStatus(client, scope),
         getAccounts(client, scope ? { entity: scope } : undefined),
+        getSyncState(client).catch(() => null),
       ])
+      const syncIssues = evaluateSyncHealth(syncState)
 
       if (opts.json) {
         const status = wantRecurring
@@ -68,7 +73,12 @@ export function registerBalanceCommand(program: Command): void {
           : []
         const pendingRecurring = status.filter((s) => s.status === 'due')
         process.stdout.write(
-          JSON.stringify({ reconciliation: rec, accounts, pending_recurring: pendingRecurring }) + '\n',
+          JSON.stringify({
+            reconciliation: rec,
+            accounts,
+            pending_recurring: pendingRecurring,
+            sync_issues: syncIssues,
+          }) + '\n',
         )
         return
       }
@@ -94,6 +104,10 @@ export function registerBalanceCommand(program: Command): void {
         : chip(rec.delta_status, 'negative')
       lines.push(row('Delta', deltaColor(formatCLP(rec.delta)), deltaChip))
       lines.push(blank())
+
+      if (syncIssues.length > 0) {
+        lines.push(...renderSyncIssues(syncIssues))
+      }
 
       if (recurringSummary.length > 0) {
         lines.push(headerLine(ui.title('RECURRING'), ui.dim('cuadre')))
@@ -128,6 +142,22 @@ export function registerBalanceCommand(program: Command): void {
 
       process.stdout.write(lines.join('\n') + '\n')
     })
+}
+
+const SOURCE_LABEL: Record<SyncHealthIssue['source'], string> = { gmail: 'Gmail', fintoc: 'Fintoc' }
+
+/** Warning block for sources that stopped syncing; figures may be incomplete. */
+export function renderSyncIssues(issues: SyncHealthIssue[]): string[] {
+  const lines = [headerLine(ui.title('SYNC'), ui.warn(`${issues.length} fuente(s) con problemas`)), blank()]
+  for (const issue of issues) {
+    const since = issue.lastSuccessAt
+      ? `último sync OK ${issue.lastSuccessAt.slice(0, 10)} (hace ${issue.hoursSinceSuccess} h)`
+      : 'nunca sincronizó OK'
+    lines.push(indent(`${ui.warn('●')} ${ui.strong(SOURCE_LABEL[issue.source])} ${ui.dim(since)}`))
+    if (issue.error) lines.push(indent(`  ${ui.dim((issue.error.split('\n')[0] ?? '').slice(0, 160))}`))
+  }
+  lines.push(blank())
+  return lines
 }
 
 async function renderSpa(
