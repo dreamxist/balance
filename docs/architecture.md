@@ -1922,8 +1922,9 @@ email_movements        Staging de correos parseados.
 categorization_rules   pattern (substring case-insensitive sobre merchant) →
                        category FK, priority (mayor gana). RLS owner-only.
 
-sync_state             Watermark del último sync exitoso por usuario.
-                       Escrito por la edge function (service role).
+sync_state             Watermarks (gmail_watermark, fintoc_watermark) y salud
+                       por fuente (*_last_success_at, *_last_error[_at]).
+                       Escrito por las edge functions (service role).
 ```
 
 ### Funciones
@@ -1969,4 +1970,74 @@ Secrets: GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, GMAIL_REFRESH_TOKEN
          (scope gmail.readonly), GMAIL_USER_ID (modo cron), CRON_SECRET.
 Cron: pg_cron 2×/día (11:00 y 23:00 UTC) vía dashboard.
 Bootstrap OAuth: scripts/gmail-auth.ts (one-shot, deno).
+```
+
+---
+
+## Ingesta bancaria vía Fintoc (fintoc-sync)
+
+Opcional. Lee los movimientos de la cuenta corriente directo del banco con la
+API de Movements de [Fintoc](https://fintoc.com) y los deja en el mismo
+staging que `gmail-sync`. Cubre lo que no genera correo (compras con débito).
+Fintoc no trae tarjetas de crédito en Chile: las compras con TC siguen
+entrando por Gmail. Setup en `docs/setup-fintoc.md`.
+
+### Reparto de fuentes
+
+`FINTOC_CUTOVER_DATE` divide la cuenta corriente entre las dos funciones:
+desde ese día (fecha de Santiago) `gmail-sync` ignora los correos de esa
+cuenta (`bancochile_pago`, `bancochile_transfer_out/in`, `bancochile_pago_tc`)
+y los trae `fintoc-sync`. `bancochile_tc` (compras con tarjeta) sigue con
+Gmail. Así cada movimiento tiene una sola fuente.
+
+### Staging
+
+Reusa `email_movements` y las fuentes `bancochile_*` (un movimiento de Fintoc
+significa lo mismo que el correo al que reemplaza):
+`gmail_message_id = 'fintoc:<movement id>'`, `bank_tx_id = <movement id>`.
+Mapeo de glosas (`supabase/functions/fintoc-sync/mapper.ts`):
+
+```
+Pago:<comercio>          (−) → bancochile_pago (gasto, merchant = comercio)
+                         (+) → bancochile_transfer_in (reverso, a revisión)
+Traspaso A:<nombre>          → bancochile_transfer_out (dest_hint = cuenta destino)
+Traspaso De:<nombre>         → bancochile_transfer_in
+Cargo Por Pago Tc            → bancochile_pago_tc, TC nacional (FINTOC_TC_LAST4)
+Pago Tarjeta De Credito      → bancochile_pago_tc, TC internacional
+Transferencia Desde / Amortizacion A Linea De Credito → ignorado (no modelado)
+Giro …                       → status error (registrar como transfer a efectivo)
+otro cargo / abono           → gasto / ingreso a revisión
+```
+
+### promote v6: dedup contra registros manuales
+
+Antes de crear un par de transferencia (pago TC o transferencia propia),
+`promote_email_movements` busca una transferencia existente con el mismo
+origen, destino y monto (±1 día) que ninguna fila de staging haya reclamado,
+y enlaza en vez de duplicar. Aplica a ambas fuentes.
+
+### Salud del sync
+
+Cada corrida de `gmail-sync` y `fintoc-sync` registra en `sync_state`
+`{gmail,fintoc}_last_success_at`, `_last_error` y `_last_error_at`
+(helper `supabase/functions/_shared/sync-health.ts`). `evaluateSyncHealth`
+(core) marca una fuente cuando su última corrida falló o lleva más de 36 h
+sin éxito; `bal balance` lo muestra en el bloque **SYNC** y en
+`--json` como `sync_issues`. Una fuente sin corridas registradas se considera
+no configurada.
+
+### Edge Function `fintoc-sync`
+
+```
+supabase/functions/fintoc-sync/
+  index.ts     auth CRON_SECRET o JWT del dueño; estado del Link (≠ active →
+               409); movimientos desde max(cutover, watermark − 3 días);
+               staging; promote; salud; resumen JSON. Sin secrets de
+               Fintoc responde {configured: false}.
+  mapper.ts    mapeo puro movimiento → staging (deno test).
+
+Secrets: FINTOC_SECRET_KEY, FINTOC_LINK_TOKEN, FINTOC_USER_ID,
+         FINTOC_CUTOVER_DATE, FINTOC_TC_LAST4 (opcional).
+Deploy:  --no-verify-jwt (la función autentica; el cron usa CRON_SECRET).
+Cron:    pg_cron 2×/día, 10 min después de gmail-sync.
 ```
