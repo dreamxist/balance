@@ -24,6 +24,17 @@ describe('triggerGmailSync', () => {
   })
 })
 
+describe('triggerGmailSync errors', () => {
+  it('surfaces the JSON error body of a failed call', async () => {
+    const error = Object.assign(new Error('Edge Function returned a non-2xx status code'), {
+      context: new Response(JSON.stringify({ error: 'Gmail token refresh failed: 401' }), { status: 502 }),
+    })
+    const invoke = vi.fn().mockResolvedValue({ data: null, error })
+    const client = { functions: { invoke } } as never
+    await expect(triggerGmailSync(client)).rejects.toThrow('Gmail token refresh failed')
+  })
+})
+
 describe('triggerFintocSync', () => {
   it('invokes fintoc-sync and returns its summary', async () => {
     const invoke = vi.fn().mockResolvedValue({ data: { configured: true, promoted: 2 }, error: null })

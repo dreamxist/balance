@@ -60,7 +60,16 @@ export function registerSyncCommand(program: Command): void {
         fail(`invalid --since: ${opts.since}. Expected YYYY-MM-DD`)
       }
       const client = await getAuthedClient()
-      const summary = await triggerGmailSync(client, { since: opts.since })
+
+      // Each source syncs on its own: a broken Gmail OAuth must not stop the
+      // bank feed, and vice versa.
+      let gmail: GmailSyncSummary | null = null
+      let gmailError: string | null = null
+      try {
+        gmail = await triggerGmailSync(client, { since: opts.since })
+      } catch (err) {
+        gmailError = err instanceof Error ? err.message : String(err)
+      }
 
       let fintoc: FintocSyncSummary | null = null
       let fintocError: string | null = null
@@ -71,14 +80,18 @@ export function registerSyncCommand(program: Command): void {
       }
 
       if (opts.json) {
-        process.stdout.write(JSON.stringify({ ...summary, fintoc, fintoc_error: fintocError }) + '\n')
+        process.stdout.write(JSON.stringify({
+          ...(gmail ?? {}),
+          gmail_error: gmailError,
+          fintoc,
+          fintoc_error: fintocError,
+        }) + '\n')
       } else {
-        process.stdout.write(renderSyncSummary(summary))
+        if (gmail) process.stdout.write(renderSyncSummary(gmail))
         if (fintoc) process.stdout.write(renderFintocSummary(fintoc))
       }
-      if (fintocError) {
-        process.stderr.write(`Fintoc: ${fintocError}\n`)
-        process.exitCode = 1
-      }
+      if (gmailError) process.stderr.write(`Gmail: ${gmailError}\n`)
+      if (fintocError) process.stderr.write(`Fintoc: ${fintocError}\n`)
+      if (gmailError || fintocError) process.exitCode = 1
     })
 }

@@ -26,7 +26,7 @@ export async function triggerGmailSync(
   const { data, error } = await supabase.functions.invoke('gmail-sync', {
     body: options.since ? { since: options.since } : {},
   })
-  if (error) throw error
+  if (error) throw new Error(await functionErrorMessage(error))
   return data as GmailSyncSummary
 }
 
