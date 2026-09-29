@@ -25,8 +25,8 @@ export type {
   PromoteSummary,
   SyncState,
 } from './inbox'
-export { triggerGmailSync } from './sync'
-export type { GmailSyncSummary } from './sync'
+export { triggerFintocSync, triggerGmailSync } from './sync'
+export type { FintocSyncSummary, GmailSyncSummary } from './sync'
 export {
   getRecurringStatus,
   processDueRecurringCharges,

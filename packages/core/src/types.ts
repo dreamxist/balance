@@ -645,16 +645,19 @@ export type Database = {
       }
       sync_state: {
         Row: {
+          fintoc_watermark: string | null
           gmail_watermark: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          fintoc_watermark?: string | null
           gmail_watermark?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          fintoc_watermark?: string | null
           gmail_watermark?: string | null
           updated_at?: string
           user_id?: string

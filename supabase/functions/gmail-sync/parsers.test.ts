@@ -4,6 +4,7 @@
 import { assertEquals, assertNotEquals } from 'jsr:@std/assert@1'
 import {
   isNoise,
+  isOwnedByFintoc,
   normalizeAccountNumber,
   parseClpAmount,
   parseEmail,
@@ -309,4 +310,19 @@ Deno.test('non-movement notices from known senders are noise, not unknown errors
     const result = parseEmail(email({ from: 'contacto@bci.cl', subject, body: 'Hola' }))
     assertEquals(result, 'ignore', `"${subject}" should be noise`)
   }
+})
+
+Deno.test('Fintoc cutover: checking-account emails from the cutover day are skipped', () => {
+  // 2026-09-30T02:00Z is still Sept 29 in Santiago
+  assertEquals(isOwnedByFintoc('bancochile_pago', '2026-09-30T02:00:00Z', '2026-09-30'), false)
+  assertEquals(isOwnedByFintoc('bancochile_pago', '2026-09-30T12:00:00Z', '2026-09-30'), true)
+  assertEquals(isOwnedByFintoc('bancochile_transfer_in', '2026-10-05T12:00:00Z', '2026-09-30'), true)
+  assertEquals(isOwnedByFintoc('bancochile_pago_tc', '2026-10-05T12:00:00Z', '2026-09-30'), true)
+})
+
+Deno.test('Fintoc cutover: card purchases, other banks and unset cutover stay with Gmail', () => {
+  assertEquals(isOwnedByFintoc('bancochile_tc', '2026-10-05T12:00:00Z', '2026-09-30'), false)
+  assertEquals(isOwnedByFintoc('bice_transfer_out', '2026-10-05T12:00:00Z', '2026-09-30'), false)
+  assertEquals(isOwnedByFintoc('bancochile_pago', '2026-10-05T12:00:00Z', null), false)
+  assertEquals(isOwnedByFintoc(null, '2026-10-05T12:00:00Z', '2026-09-30'), false)
 })
