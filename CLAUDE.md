@@ -241,6 +241,8 @@ App de finanzas personales que unifica la gestion financiera de una persona y un
 - Debt payments = `debt_payment` type — doesn't affect accumulated
 - Recurring charges via `recurring_charges` table + `daily-charges` cron: `auto_charge` distinguishes automatic vs. manual; catch-up by month with ledger-based dedup (`transactions.metadata.recurring_charge_id`); managed with `bal recurring` and reconciled at `bal balance`
 - Fintual integration (optional): API at `https://fintual.cl/api/real_assets/{id}/days`, shares stored in account metadata
+- Bank ingestion: `gmail-sync` (bank notification emails) + optional `fintoc-sync` (checking-account movements via Fintoc, covers debit purchases). `FINTOC_CUTOVER_DATE` gives the checking account to Fintoc so each movement has one source; card purchases stay with Gmail. Both stage in `email_movements` and promote via `promote_email_movements`
+- Sync health: every sync run records its outcome in `sync_state`; `bal balance` shows a SYNC block when a source failed or has not synced for 36 h
 - Account balances updated directly for off-budget accounts (no adjustment transactions)
 - Opening balance calibrated via `adjustment` with category `apertura`
 
@@ -281,6 +283,8 @@ App de finanzas personales que unifica la gestion financiera de una persona y un
 ### Integrations
 - Fintual API: real-time fund prices (configure fund IDs per account metadata)
 - Edge Function `daily-charges`: cron for auto-registering recurring charges + debt payments
+- Edge Function `gmail-sync`: cron 2×/day, bank emails → staging → transactions (docs/setup-gmail.md)
+- Edge Function `fintoc-sync` (optional): cron 2×/day, Fintoc Movements API → staging → transactions (docs/setup-fintoc.md)
 <!-- GSD:architecture-end -->
 
 <!-- GSD:workflow-start source:GSD defaults -->

@@ -985,6 +985,32 @@ BUCKETS:
 
 GAPS ACEPTADOS (no generan correo):
   - Compras con TC BICE ****NNNN
-  - Compras con débito
-  → se detectan al cuadrar contra el estado de cuenta / cartola
+  - Compras con débito → cubiertas por fintoc-sync si está configurado (Flujo 14)
+  → lo demás se detecta al cuadrar contra el estado de cuenta / cartola
+```
+
+---
+
+## Flujo 14: Cuenta corriente vía Fintoc (fintoc-sync, opcional)
+
+```
+2×/día (10 min después de gmail-sync), o manual con `bal sync`
+(que corre ambas fuentes por separado):
+
+  1. fintoc-sync revisa el Link: si no está active (login_required tras
+     cambiar la clave del banco) falla con 409 y queda en la salud del sync
+  2. Movimientos confirmados desde max(FINTOC_CUTOVER_DATE, watermark − 3d)
+     → email_movements con fuentes bancochile_* (ver docs/architecture.md)
+  3. promote_email_movements: mismas reglas que Flujo 13, más dedup de
+     pagos TC y transferencias propias contra lo registrado a mano
+  4. Desde el corte, gmail-sync ya no ingiere los correos de esa cuenta:
+     una sola fuente por movimiento. Las compras con TC siguen por Gmail.
+
+SIN BACKFILL: el corte arranca hacia adelante. Traer movimientos previos
+duplicaría lo ya cuadrado a mano.
+
+SI UNA FUENTE SE CAE:
+  `bal balance` muestra el bloque SYNC (última corrida con error o > 36 h sin
+  éxito) con la causa. Gmail: repetir docs/setup-gmail.md con un client
+  nuevo. Fintoc: reconectar el Link desde el widget de Fintoc.
 ```
