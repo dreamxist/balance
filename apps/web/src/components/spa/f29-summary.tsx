@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { resolveF29Values } from '@balance/core'
 import { useF29Summary, useMarkF29Declared } from '@/hooks/use-spa'
 import { formatMoney } from '@/lib/format'
 import { Button } from '@/components/ui/button'
@@ -28,6 +29,7 @@ export function F29Summary({ year, month }: F29SummaryProps) {
 
   if (!data) return null
 
+  const f29 = resolveF29Values(data)
   const deadline = new Date(data.deadline + 'T00:00:00')
   const today = new Date()
   today.setHours(0, 0, 0, 0)
@@ -63,27 +65,33 @@ export function F29Summary({ year, month }: F29SummaryProps) {
         </div>
 
         <div className="space-y-1.5 text-sm">
-          <Row label="IVA Debito Fiscal" value={data.iva_debito} />
-          <Row label="IVA Credito Fiscal" value={-data.iva_credito} className="text-green-600" />
-          {data.remanente_anterior > 0 && (
-            <Row label="Remanente anterior" value={-data.remanente_anterior} className="text-blue-500" />
+          <Row label="IVA Debito Fiscal" value={f29.iva_debito} />
+          <Row label="IVA Credito Fiscal" value={-f29.iva_credito} className="text-green-600" />
+          {f29.remanente_anterior > 0 && (
+            <Row label="Remanente anterior" value={-f29.remanente_anterior} className="text-blue-500" />
           )}
 
           <div className="my-2 border-t" />
 
-          <Row label="IVA neto" value={data.iva_neto} bold />
-          <Row label="PPM (0,25%)" value={data.ppm} />
+          <Row label="IVA neto" value={f29.iva_neto} bold />
+          <Row label={f29.source === 'official' ? 'PPM' : 'PPM (0,25%)'} value={f29.ppm} />
 
           <div className="my-2 border-t" />
 
           <div className="flex items-center justify-between font-semibold">
             <span>Total F29</span>
-            <span className="font-mono text-base">{formatMoney(data.f29_total)}</span>
+            <span className="font-mono text-base">{formatMoney(f29.f29_total)}</span>
           </div>
 
-          {data.remanente_siguiente > 0 && (
+          {f29.remanente_siguiente > 0 && (
             <p className="mt-2 text-xs text-blue-500">
-              Remanente prox. mes: {formatMoney(data.remanente_siguiente)}
+              Remanente prox. mes: {formatMoney(f29.remanente_siguiente)}
+            </p>
+          )}
+
+          {f29.breakdownUnknown && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              Solo se declaro el total a pagar: el desglose IVA/PPM no se conoce.
             </p>
           )}
         </div>
@@ -92,6 +100,11 @@ export function F29Summary({ year, month }: F29SummaryProps) {
           <div className="mt-3 rounded-md bg-green-50 p-2 text-xs dark:bg-green-950/20">
             Declarado el {new Date(data.declared.declared_at + 'T00:00:00').toLocaleDateString('es-CL')}
             {data.declared.confirmation_number && ` — N° ${data.declared.confirmation_number}`}
+            {f29.source === 'official' && data.f29_total !== f29.f29_total && (
+              <span className="mt-1 block text-muted-foreground">
+                La app estima {formatMoney(data.f29_total)} para este periodo: faltan facturas por cargar.
+              </span>
+            )}
           </div>
         ) : (
           <Button
