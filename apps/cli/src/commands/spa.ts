@@ -12,9 +12,12 @@ import {
   markF29Declared,
   markSpaInvoicePaid,
   parseUsdAmount,
+  resolveF29Values,
   usdToClp,
   type SupabaseClient,
   type Database,
+  type F29Summary,
+  type ResolvedF29,
 } from '@balance/core'
 import { getAuthedClient } from '../lib/client'
 import { fail } from '../lib/exit'
@@ -284,13 +287,39 @@ function registerF29(group: Command): void {
 
       const client = await getAuthedClient()
       const data = await getF29Summary(client, year, month)
+      const effective = resolveF29Values(data)
 
       if (opts.json) {
-        process.stdout.write(JSON.stringify(data) + '\n')
+        process.stdout.write(JSON.stringify({ ...data, effective }) + '\n')
         return
       }
-      process.stdout.write(JSON.stringify(data, null, 2) + '\n')
+      process.stdout.write(formatF29(monthArg, data, effective))
     })
+}
+
+function formatF29(monthArg: string, data: F29Summary, effective: ResolvedF29): string {
+  const lines: string[] = []
+  const origin = effective.source === 'official' ? 'declarado (F29 oficial)' : 'estimado por la app'
+  lines.push(`F29 ${monthArg} — ${origin}`)
+  lines.push(`  IVA débito      ${padLeft(formatCLP(effective.iva_debito), 14)}`)
+  lines.push(`  IVA crédito     ${padLeft(formatCLP(effective.iva_credito), 14)}`)
+  lines.push(`  Remanente ant.  ${padLeft(formatCLP(effective.remanente_anterior), 14)}`)
+  lines.push(`  IVA neto        ${padLeft(formatCLP(effective.iva_neto), 14)}`)
+  lines.push(`  PPM             ${padLeft(formatCLP(effective.ppm), 14)}`)
+  lines.push(`  Total a pagar   ${padLeft(formatCLP(effective.f29_total), 14)}`)
+  lines.push(`  Vence           ${padLeft(data.deadline, 14)}`)
+
+  if (effective.breakdownUnknown) {
+    lines.push('  ⚠ Solo se declaró el total a pagar: el desglose IVA/PPM no se conoce.')
+  }
+  if (effective.source === 'official' && data.f29_total !== effective.f29_total) {
+    lines.push(`  ⚠ La app estima ${formatCLP(data.f29_total)} para este periodo — faltan facturas por cargar.`)
+  }
+  if (data.declared) {
+    const folio = data.declared.confirmation_number ? ` — N° ${data.declared.confirmation_number}` : ''
+    lines.push(`  Declarado el ${data.declared.declared_at}${folio}`)
+  }
+  return lines.join('\n') + '\n'
 }
 
 interface AnnualOptions {

@@ -197,6 +197,17 @@ export interface F29Declaration {
   declared_at: string
   confirmation_number: string | null
   notes: string | null
+  /** True when the period was declared from the real F29 (official SII codes). */
+  is_official?: boolean
+  /** Raw SII codes as declared, kept for audit. */
+  official_codes?: Record<string, number> | null
+  iva_debito?: number
+  iva_credito?: number
+  remanente_anterior?: number
+  remanente_siguiente?: number
+  iva_neto?: number
+  ppm?: number
+  f29_total?: number
 }
 
 export interface F29Summary {
@@ -213,6 +224,59 @@ export interface F29Summary {
   bruto: number
   deadline: string
   declared: F29Declaration | null
+}
+
+export interface F29Values {
+  iva_debito: number
+  iva_credito: number
+  remanente_anterior: number
+  remanente_siguiente: number
+  iva_neto: number
+  ppm: number
+  f29_total: number
+}
+
+export interface ResolvedF29 extends F29Values {
+  /** 'official' once the period was declared from the real F29, 'estimate' otherwise. */
+  source: 'official' | 'estimate'
+  /** The declaration carries the total to pay but no IVA/PPM split. */
+  breakdownUnknown: boolean
+}
+
+/** What the period is actually worth: the declared F29 wins over the app's estimate.
+ *  Without this the summary keeps reporting its own numbers after a declaration,
+ *  which read as zeros whenever the period's invoices are not loaded yet. */
+export function resolveF29Values(summary: F29Summary): ResolvedF29 {
+  const declared = summary.declared
+  if (!declared?.is_official) {
+    return {
+      iva_debito: summary.iva_debito,
+      iva_credito: summary.iva_credito,
+      remanente_anterior: summary.remanente_anterior,
+      remanente_siguiente: summary.remanente_siguiente,
+      iva_neto: summary.iva_neto,
+      ppm: summary.ppm,
+      f29_total: summary.f29_total,
+      source: 'estimate',
+      breakdownUnknown: false,
+    }
+  }
+
+  const values: F29Values = {
+    iva_debito: declared.iva_debito ?? 0,
+    iva_credito: declared.iva_credito ?? 0,
+    remanente_anterior: declared.remanente_anterior ?? 0,
+    remanente_siguiente: declared.remanente_siguiente ?? 0,
+    iva_neto: declared.iva_neto ?? 0,
+    ppm: declared.ppm ?? 0,
+    f29_total: declared.f29_total ?? 0,
+  }
+
+  return {
+    ...values,
+    source: 'official',
+    breakdownUnknown: values.f29_total > 0 && values.iva_neto === 0 && values.ppm === 0,
+  }
 }
 
 export interface MarkF29DeclaredInput {
