@@ -1,61 +1,72 @@
 import { useQuery, useMutation, useQueryClient, type UseQueryResult } from '@tanstack/react-query'
+import {
+  createRecurringCharge,
+  deleteRecurringCharge,
+  getRecurringStatus,
+  listRecurringDetailed,
+  payRecurringCharge,
+  updateRecurringCharge,
+  type CreateRecurringInput,
+  type RecurringChargeDetailed,
+  type RecurringStatusItem,
+  type UpdateRecurringInput,
+} from '@balance/core'
 import { supabase } from '@/lib/supabase'
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const db = supabase as any
-
-interface RecurringCharge {
-  id: string
-  name: string
-  amount: number
-  currency: string
-  day_of_month: number
-  category: string
-  account_id: string
-  is_active: boolean
-}
-
-export type { RecurringCharge }
-
-export function useRecurringCharges(): UseQueryResult<RecurringCharge[]> {
+export function useRecurringCharges(): UseQueryResult<RecurringChargeDetailed[]> {
   return useQuery({
-    queryKey: ['recurring-charges'],
-    queryFn: async () => {
-      const { data, error } = await db
-        .from('recurring_charges')
-        .select('*')
-        .order('day_of_month')
-      if (error) throw error
-      return data as unknown as RecurringCharge[]
-    },
+    queryKey: ['recurring-charges', 'list'],
+    queryFn: () => listRecurringDetailed(supabase, { entity: 'personal', includeInactive: true }),
     staleTime: 60_000,
   })
 }
 
-export function useCreateRecurring() {
+export function useRecurringStatus(): UseQueryResult<RecurringStatusItem[]> {
+  return useQuery({
+    queryKey: ['recurring-charges', 'status'],
+    queryFn: () => getRecurringStatus(supabase, { entity: 'personal' }),
+    staleTime: 60_000,
+  })
+}
+
+function useInvalidateRecurring() {
   const queryClient = useQueryClient()
+  return () => queryClient.invalidateQueries({ queryKey: ['recurring-charges'] })
+}
+
+export function useCreateRecurring() {
+  const invalidate = useInvalidateRecurring()
   return useMutation({
-    mutationFn: async (input: Omit<RecurringCharge, 'id' | 'is_active' | 'currency'>) => {
-      const { error } = await db.from('recurring_charges').insert({
-        name: input.name,
-        amount: input.amount,
-        day_of_month: input.day_of_month,
-        category: input.category,
-        account_id: input.account_id,
-      })
-      if (error) throw error
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['recurring-charges'] }),
+    mutationFn: (input: CreateRecurringInput) => createRecurringCharge(supabase, input),
+    onSuccess: invalidate,
+  })
+}
+
+export function useUpdateRecurring() {
+  const invalidate = useInvalidateRecurring()
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: UpdateRecurringInput }) =>
+      updateRecurringCharge(supabase, id, input),
+    onSuccess: invalidate,
   })
 }
 
 export function useDeleteRecurring() {
+  const invalidate = useInvalidateRecurring()
+  return useMutation({
+    mutationFn: (id: string) => deleteRecurringCharge(supabase, id),
+    onSuccess: invalidate,
+  })
+}
+
+export function usePayRecurring() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await db.from('recurring_charges').delete().eq('id', id)
-      if (error) throw error
+    mutationFn: (chargeId: string) => payRecurringCharge(supabase, { chargeId }),
+    onSuccess: () => {
+      for (const key of ['recurring-charges', 'transactions', 'accounts', 'reconciliation', 'monthly-breakdown']) {
+        void queryClient.invalidateQueries({ queryKey: [key] })
+      }
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['recurring-charges'] }),
   })
 }

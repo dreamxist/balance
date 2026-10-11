@@ -6,6 +6,7 @@ import { useMonthlyBreakdown } from '@/hooks/use-monthly-breakdown'
 import { useAccounts } from '@/hooks/use-accounts'
 import { useCategories } from '@/hooks/use-categories'
 import { useAutoCharges } from '@/hooks/use-auto-charges'
+import { usePayRecurring } from '@/hooks/use-recurring'
 import { supabase } from '@/lib/supabase'
 import { formatMoney } from '@/lib/format'
 import { toast } from 'sonner'
@@ -351,6 +352,7 @@ function ChargesSection({
   open: boolean
   onToggle: () => void
 }) {
+  const payMut = usePayRecurring()
   const cobrados = charges.charges.filter((c) => c.charged)
   const pendientes = charges.charges.filter((c) => !c.charged)
   const progressPct = charges.totalComprometido > 0
@@ -378,14 +380,33 @@ function ChargesSection({
           {pendientes.length > 0 && (
             <>
               <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider pt-1 pb-0.5">Pendiente</p>
-              {pendientes.map((c, i) => (
-                <div key={`p-${i}`} className="flex items-center justify-between py-1 text-sm">
-                  <div className="flex items-center gap-2">
-                    <span className="size-1.5 rounded-full bg-amber-500/60" />
-                    <span>{c.name}</span>
-                    <span className="text-xs text-muted-foreground">día {c.day}</span>
+              {pendientes.map((c) => (
+                <div key={`p-${c.type}-${c.id}`} className="flex items-center justify-between gap-2 py-1 text-sm">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span className={cn('size-1.5 shrink-0 rounded-full', c.due ? 'bg-amber-500' : 'bg-amber-500/40')} />
+                    <div className="min-w-0">
+                      <p className="truncate">{c.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        día {c.day}{c.due && (c.autoCharge ? ' · se cobra solo' : ' · pagas tú')}
+                      </p>
+                    </div>
                   </div>
-                  <span className="font-mono">{formatMoney(c.amount)}</span>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <span className="font-mono">{formatMoney(c.amount)}</span>
+                    {c.type === 'recurring' && c.due && !c.autoCharge && (
+                      <button
+                        type="button"
+                        disabled={payMut.isPending}
+                        onClick={() => payMut.mutate(c.id, {
+                          onSuccess: () => toast.success(`"${c.name}" pagado`),
+                          onError: (e) => toast.error(e.message),
+                        })}
+                        className="rounded-sm border border-border px-2 py-0.5 text-xs hover:bg-muted disabled:opacity-50"
+                      >
+                        Pagado
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </>
@@ -393,8 +414,8 @@ function ChargesSection({
           {cobrados.length > 0 && (
             <>
               <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider pt-2 pb-0.5">Cobrado</p>
-              {cobrados.map((c, i) => (
-                <div key={`c-${i}`} className="flex items-center justify-between py-1 text-sm text-muted-foreground">
+              {cobrados.map((c) => (
+                <div key={`c-${c.type}-${c.id}`} className="flex items-center justify-between py-1 text-sm text-muted-foreground">
                   <div className="flex items-center gap-2">
                     <span className="size-1.5 rounded-full bg-emerald-500" />
                     <span>{c.name}</span>

@@ -134,3 +134,54 @@ export function evaluateSyncHealth(
   }
   return issues
 }
+
+export type TransactionSource = 'fintoc' | 'gmail' | 'recurring' | 'manual'
+
+/** Where a transaction came from, read from the metadata ingestion writes. */
+export function transactionSource(metadata: unknown): TransactionSource {
+  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) return 'manual'
+  const meta = metadata as Record<string, unknown>
+  const stagedId = meta.gmail_message_id
+  if (typeof stagedId === 'string') return stagedId.startsWith('fintoc:') ? 'fintoc' : 'gmail'
+  if (typeof meta.recurring_charge_id === 'string') return 'recurring'
+  return 'manual'
+}
+
+export interface SyncSourceStatus {
+  source: SyncSourceName
+  lastSuccessAt: string | null
+  hoursSinceSuccess: number | null
+  /** Error of the latest run when it failed after the last success. */
+  error: string | null
+  status: 'ok' | 'stale' | 'failing'
+}
+
+/**
+ * Freshness of every configured source, healthy ones included. Sources that
+ * never ran are omitted, same as evaluateSyncHealth.
+ */
+export function syncSourcesStatus(
+  state: SyncHealthInput | null,
+  now: Date = new Date(),
+): SyncSourceStatus[] {
+  if (!state) return []
+  const issues = new Map(evaluateSyncHealth(state, now).map((i) => [i.source, i]))
+  const sources: SyncSourceName[] = ['gmail', 'fintoc']
+  const result: SyncSourceStatus[] = []
+  for (const source of sources) {
+    const lastSuccessAt = state[`${source}_last_success_at`]
+    if (!lastSuccessAt && !state[`${source}_last_error_at`]) continue
+    const issue = issues.get(source)
+    const hoursSinceSuccess = lastSuccessAt
+      ? Math.floor((now.getTime() - Date.parse(lastSuccessAt)) / 3_600_000)
+      : null
+    result.push({
+      source,
+      lastSuccessAt,
+      hoursSinceSuccess,
+      error: issue?.error ?? null,
+      status: !issue ? 'ok' : issue.error ? 'failing' : 'stale',
+    })
+  }
+  return result
+}

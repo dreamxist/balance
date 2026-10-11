@@ -1,7 +1,8 @@
-import { useRecurringCharges } from './use-recurring'
+import { useRecurringStatus } from './use-recurring'
 import { useDebts } from './use-debts'
 
 interface PendingCharge {
+  id: string
   name: string
   amount: number
   day: number
@@ -9,10 +10,13 @@ interface PendingCharge {
   accountId: string
   type: 'recurring' | 'debt'
   charged: boolean
+  /** Past its day this month and not paid yet. */
+  due: boolean
+  autoCharge: boolean
 }
 
 export function useAutoCharges() {
-  const recurring = useRecurringCharges()
+  const recurring = useRecurringStatus()
   const debts = useDebts()
 
   const today = new Date()
@@ -21,15 +25,17 @@ export function useAutoCharges() {
   const allCharges: PendingCharge[] = []
 
   for (const charge of recurring.data ?? []) {
-    if (!charge.is_active) continue
     allCharges.push({
+      id: charge.id,
       name: charge.name,
       amount: charge.amount,
       day: charge.day_of_month,
       category: charge.category,
       accountId: charge.account_id,
       type: 'recurring',
-      charged: charge.day_of_month <= currentDay,
+      charged: charge.status === 'charged',
+      due: charge.status === 'due',
+      autoCharge: charge.auto_charge,
     })
   }
 
@@ -37,6 +43,7 @@ export function useAutoCharges() {
   for (const debt of debts.data ?? []) {
     if (debt.installments_paid >= debt.installments) continue
     allCharges.push({
+      id: debt.id,
       name: `Cuota ${debt.description ?? ''}`,
       amount: debt.installment_amount,
       day: debtDay,
@@ -44,6 +51,8 @@ export function useAutoCharges() {
       accountId: debt.account_id ?? '',
       type: 'debt',
       charged: debtDay <= currentDay,
+      due: false,
+      autoCharge: true,
     })
   }
 

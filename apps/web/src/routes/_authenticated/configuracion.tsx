@@ -4,13 +4,22 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { createAccount, archiveAccount, renameAccount } from '@balance/core'
 import { useAccounts, type Account } from '@/hooks/use-accounts'
 import { useProfile } from '@/hooks/use-profile'
-import { useRecurringCharges, useCreateRecurring, useDeleteRecurring, type RecurringCharge } from '@/hooks/use-recurring'
+import {
+  useCreateRecurring,
+  useDeleteRecurring,
+  usePayRecurring,
+  useRecurringCharges,
+  useRecurringStatus,
+  useUpdateRecurring,
+} from '@/hooks/use-recurring'
+import type { RecurringStatus } from '@balance/core'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { SkeletonCard } from '@/components/ui/skeleton'
 import { SyncButton } from '@/components/sync-button'
 import { toast } from 'sonner'
-import { formatMoney } from '@/lib/format'
+import { formatMoney, formatShortDate } from '@/lib/format'
+import { cn } from '@/lib/utils'
 import { ExportSection } from '@/components/configuracion/export-section'
 import { ApiKeysSection } from '@/components/configuracion/api-keys-section'
 
@@ -324,27 +333,33 @@ function AddAccountRow({
 
 function RecurringChargesSection({ accounts }: { accounts: Account[] }) {
   const charges = useRecurringCharges()
+  const status = useRecurringStatus()
   const createMut = useCreateRecurring()
+  const updateMut = useUpdateRecurring()
   const deleteMut = useDeleteRecurring()
+  const payMut = usePayRecurring()
   const [adding, setAdding] = useState(false)
   const [name, setName] = useState('')
   const [amount, setAmount] = useState('')
   const [day, setDay] = useState('1')
   const [category, setCategory] = useState('necesidad.suscripciones')
   const [accountId, setAccountId] = useState('')
+  const [autoCharge, setAutoCharge] = useState(true)
 
   const activeAccounts = accounts.filter((a) => !a.is_archived)
+  const statusById = new Map((status.data ?? []).map((s) => [s.id, s]))
 
   function handleAdd() {
     if (!name || !amount || !accountId) return
     createMut.mutate(
-      { name, amount: parseInt(amount, 10), day_of_month: parseInt(day, 10), category, account_id: accountId },
+      { name, amount: parseInt(amount, 10), dayOfMonth: parseInt(day, 10), category, accountId, autoCharge },
       {
         onSuccess: () => {
           setAdding(false)
           setName('')
           setAmount('')
           setDay('1')
+          setAutoCharge(true)
           toast.success(`"${name}" agregado`)
         },
         onError: (e) => toast.error(e.message),
@@ -352,11 +367,16 @@ function RecurringChargesSection({ accounts }: { accounts: Account[] }) {
     )
   }
 
+  function update(id: string, input: Parameters<typeof updateMut.mutate>[0]['input']) {
+    updateMut.mutate({ id, input }, { onError: (e) => toast.error(e.message) })
+  }
+
   const total = (charges.data ?? []).filter((c) => c.is_active).reduce((s, c) => s + c.amount, 0)
+  const inputCls = 'rounded-sm border border-input bg-background px-2 py-1 text-sm focus:border-ring focus:ring-1 focus:ring-ring/20 focus:outline-none'
 
   return (
     <div className="rounded-md border border-border bg-card">
-      <div className="flex items-center justify-between border-b border-border px-5 py-3">
+      <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3 md:px-5">
         <div>
           <h2 className="font-semibold">Cargos Recurrentes</h2>
           <p className="text-xs text-muted-foreground">
@@ -374,50 +394,105 @@ function RecurringChargesSection({ accounts }: { accounts: Account[] }) {
       <div className="divide-y divide-border">
         {adding && (
           <form
-            className="flex flex-wrap items-center gap-2 bg-muted/30 px-5 py-3"
+            className="flex flex-wrap items-center gap-2 bg-muted/30 px-4 py-3 md:px-5"
             onSubmit={(e) => { e.preventDefault(); handleAdd() }}
           >
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nombre" className="w-32 rounded-sm border border-input bg-background px-2 py-1 text-sm focus:border-ring focus:ring-1 focus:ring-ring/20 focus:outline-none" autoFocus />
-            <input value={amount} onChange={(e) => setAmount(e.target.value)} type="number" placeholder="Monto" className="w-24 rounded-sm border border-input bg-background px-2 py-1 font-mono text-sm focus:border-ring focus:ring-1 focus:ring-ring/20 focus:outline-none" />
-            <select value={day} onChange={(e) => setDay(e.target.value)} className="w-20 rounded-sm border border-input bg-background px-2 py-1 text-sm focus:border-ring focus:ring-1 focus:ring-ring/20 focus:outline-none">
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nombre" className={cn(inputCls, 'w-32')} autoFocus />
+            <input value={amount} onChange={(e) => setAmount(e.target.value)} type="number" inputMode="numeric" placeholder="Monto" className={cn(inputCls, 'w-24 font-mono')} />
+            <select value={day} onChange={(e) => setDay(e.target.value)} className={cn(inputCls, 'w-20')}>
               {Array.from({ length: 31 }, (_, i) => <option key={i + 1} value={i + 1}>Día {i + 1}</option>)}
             </select>
-            <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-44 rounded-sm border border-input bg-background px-2 py-1 text-sm focus:border-ring focus:ring-1 focus:ring-ring/20 focus:outline-none">
+            <select value={category} onChange={(e) => setCategory(e.target.value)} className={cn(inputCls, 'w-44')}>
               <option value="necesidad.suscripciones">Suscripciones</option>
               <option value="necesidad.servicios">Servicios</option>
               <option value="necesidad.seguros">Seguros</option>
             </select>
-            <select value={accountId} onChange={(e) => setAccountId(e.target.value)} className="w-36 rounded-sm border border-input bg-background px-2 py-1 text-sm focus:border-ring focus:ring-1 focus:ring-ring/20 focus:outline-none">
+            <select value={accountId} onChange={(e) => setAccountId(e.target.value)} className={cn(inputCls, 'w-36')}>
               <option value="">Cuenta...</option>
               {activeAccounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
             </select>
+            <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <input type="checkbox" checked={autoCharge} onChange={(e) => setAutoCharge(e.target.checked)} />
+              Se cobra solo
+            </label>
             <Button size="sm" type="submit" disabled={createMut.isPending || !name || !amount || !accountId}>Crear</Button>
             <Button size="sm" variant="ghost" onClick={() => setAdding(false)}>Cancelar</Button>
           </form>
         )}
 
-        {(charges.data ?? []).map((charge) => (
-          <div key={charge.id} className="flex items-center justify-between px-5 py-3">
-            <div className="flex-1">
-              <span className="text-sm">{charge.name}</span>
-              <span className="ml-2 text-xs text-muted-foreground">día {charge.day_of_month}</span>
+        {(charges.data ?? []).map((charge) => {
+          const st = statusById.get(charge.id)
+          return (
+            <div key={charge.id} className={cn('px-4 py-3 md:px-5', !charge.is_active && 'opacity-50')}>
+              <div className="flex items-center gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="truncate text-sm">{charge.name}</span>
+                    {charge.is_active && st && <RecurringStatusChip status={st.status} />}
+                    {!charge.is_active && <span className="text-xs text-muted-foreground">pausado</span>}
+                  </div>
+                  <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                    día {charge.day_of_month} · {charge.account_name} · {charge.auto_charge ? 'se cobra solo' : 'pagas tú'}
+                    {charge.last_charged_on && ` · último ${formatShortDate(charge.last_charged_on)}`}
+                  </p>
+                </div>
+                <span className="shrink-0 font-mono text-sm">{formatMoney(charge.amount)}</span>
+              </div>
+              <div className="mt-2 flex flex-wrap items-center gap-3 text-xs">
+                {charge.is_active && st?.status === 'due' && !charge.auto_charge && (
+                  <button
+                    type="button"
+                    disabled={payMut.isPending}
+                    onClick={() => payMut.mutate(charge.id, {
+                      onSuccess: () => toast.success(`"${charge.name}" pagado`),
+                      onError: (e) => toast.error(e.message),
+                    })}
+                    className="rounded-sm border border-border px-2 py-0.5 hover:bg-muted disabled:opacity-50"
+                  >
+                    Marcar pagado
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => update(charge.id, { autoCharge: !charge.auto_charge })}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  {charge.auto_charge ? 'Cambiar a manual' : 'Cambiar a automático'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => update(charge.id, { isActive: !charge.is_active })}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  {charge.is_active ? 'Pausar' : 'Reactivar'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { if (confirm(`¿Eliminar "${charge.name}"?`)) deleteMut.mutate(charge.id) }}
+                  className="ml-auto text-muted-foreground hover:text-destructive"
+                >
+                  Eliminar
+                </button>
+              </div>
             </div>
-            <span className="font-mono text-sm">{formatMoney(charge.amount)}</span>
-            <span className="ml-3 text-xs text-muted-foreground">{charge.category.split('.').pop()}</span>
-            <button
-              type="button"
-              onClick={() => { if (confirm(`¿Eliminar "${charge.name}"?`)) deleteMut.mutate(charge.id) }}
-              className="ml-3 text-xs text-muted-foreground hover:text-destructive"
-            >
-              ✕
-            </button>
-          </div>
-        ))}
+          )
+        })}
 
-        {(charges.data ?? []).length === 0 && !adding && (
+        {charges.isSuccess && charges.data.length === 0 && !adding && (
           <p className="px-5 py-4 text-sm text-muted-foreground">Sin cargos recurrentes</p>
         )}
       </div>
     </div>
   )
+}
+
+const RECURRING_STATUS: Record<RecurringStatus, { label: string; className: string }> = {
+  charged: { label: 'cobrado', className: 'text-emerald-600 dark:text-emerald-400' },
+  due: { label: 'pendiente', className: 'text-amber-600 dark:text-amber-400' },
+  upcoming: { label: 'próximo', className: 'text-muted-foreground' },
+}
+
+function RecurringStatusChip({ status }: { status: RecurringStatus }) {
+  const { label, className } = RECURRING_STATUS[status]
+  return <span className={cn('shrink-0 text-xs', className)}>{label}</span>
 }

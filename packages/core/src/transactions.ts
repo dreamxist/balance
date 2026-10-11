@@ -49,7 +49,11 @@ export async function getTransactions(supabase: TypedClient, options?: {
   limit?: number
   offset?: number
 }) {
-  let query = supabase.from('transactions').select('*').order('date', { ascending: false })
+  let query = supabase
+    .from('transactions')
+    .select('*')
+    .order('date', { ascending: false })
+    .order('created_at', { ascending: false })
   if (options?.accountId) query = query.eq('account_id', options.accountId)
   if (options?.category) query = query.ilike('category', `${options.category}%`)
   if (options?.types && options.types.length > 0) {

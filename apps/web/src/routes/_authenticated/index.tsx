@@ -7,6 +7,7 @@ import { DeltaIndicator } from '@/components/dashboard/delta-indicator'
 import { BucketCard } from '@/components/dashboard/bucket-card'
 import { BankGroupCard } from '@/components/dashboard/bank-group-card'
 import { Recommendations } from '@/components/dashboard/recommendations'
+import { FreshnessCard } from '@/components/dashboard/freshness-card'
 import { SkeletonCard } from '@/components/ui/skeleton'
 import { Fab } from '@/components/ui/fab'
 import { BottomSheet } from '@/components/ui/bottom-sheet'
@@ -102,6 +103,8 @@ function DashboardPage() {
             <DeltaIndicator delta={delta} status={deltaStatus} />
           </div>
         )}
+
+        <FreshnessCard className="col-span-1 md:col-span-2" />
 
         <BankGroupCard
           title="Tengo"
