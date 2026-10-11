@@ -1,5 +1,12 @@
 import { describe, expect, it, vi } from 'vitest'
-import { evaluateSyncHealth, triggerFintocSync, triggerGmailSync, type SyncHealthInput } from './sync'
+import {
+  evaluateSyncHealth,
+  syncSourcesStatus,
+  transactionSource,
+  triggerFintocSync,
+  triggerGmailSync,
+  type SyncHealthInput,
+} from './sync'
 
 describe('triggerGmailSync', () => {
   it('invokes the edge function without since by default', async () => {
@@ -115,6 +122,49 @@ describe('evaluateSyncHealth', () => {
     const state = { ...empty, fintoc_last_error: 'boom', fintoc_last_error_at: '2026-10-10T11:00:00Z' }
     expect(evaluateSyncHealth(state, now)).toEqual([
       { source: 'fintoc', lastSuccessAt: null, error: 'boom', hoursSinceSuccess: null },
+    ])
+  })
+})
+
+describe('transactionSource', () => {
+  it('classifies ingestion and recurring metadata', () => {
+    expect(transactionSource({ gmail_message_id: 'fintoc:mov_1', source: 'bancochile_cargo' })).toBe('fintoc')
+    expect(transactionSource({ gmail_message_id: '18f2a', source: 'bice_compra' })).toBe('gmail')
+    expect(transactionSource({ recurring_charge_id: 'abc' })).toBe('recurring')
+    expect(transactionSource({})).toBe('manual')
+    expect(transactionSource(null)).toBe('manual')
+  })
+})
+
+describe('syncSourcesStatus', () => {
+  const now = new Date('2026-10-11T12:00:00Z')
+  const base: SyncHealthInput = {
+    gmail_last_success_at: null,
+    gmail_last_error: null,
+    gmail_last_error_at: null,
+    fintoc_last_success_at: null,
+    fintoc_last_error: null,
+    fintoc_last_error_at: null,
+  }
+
+  it('reports healthy sources too, skipping ones that never ran', () => {
+    const result = syncSourcesStatus({ ...base, gmail_last_success_at: '2026-10-11T09:00:00Z' }, now)
+    expect(result).toEqual([
+      { source: 'gmail', lastSuccessAt: '2026-10-11T09:00:00Z', hoursSinceSuccess: 3, error: null, status: 'ok' },
+    ])
+  })
+
+  it('marks failing and stale sources', () => {
+    const result = syncSourcesStatus({
+      ...base,
+      gmail_last_success_at: '2026-10-08T00:00:00Z',
+      fintoc_last_success_at: '2026-10-11T00:00:00Z',
+      fintoc_last_error: 'link expired',
+      fintoc_last_error_at: '2026-10-11T10:00:00Z',
+    }, now)
+    expect(result.map((r) => [r.source, r.status, r.error])).toEqual([
+      ['gmail', 'stale', null],
+      ['fintoc', 'failing', 'link expired'],
     ])
   })
 })

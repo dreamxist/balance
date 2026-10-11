@@ -4,6 +4,7 @@ import { useAccounts } from '@/hooks/use-accounts'
 import { formatMoney } from '@/lib/format'
 import { EmptyState } from '@/components/ui/empty-state'
 import { cn } from '@/lib/utils'
+import { SourceBadge } from './source-badge'
 
 const CATEGORY_COLORS: Record<string, string> = {
   necesidad: 'bg-blue-500',
@@ -144,6 +145,8 @@ export function TransactionList({
                 <span className="flex-1 text-sm truncate min-w-0">
                   {tx.description || getCategoryLabel(tx.category)}
                 </span>
+
+                <SourceBadge metadata={tx.metadata} />
 
                 {/* Category pill */}
                 <span className="hidden sm:flex items-center gap-1.5 shrink-0">
