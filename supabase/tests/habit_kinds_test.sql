@@ -31,11 +31,9 @@ select throws_ok(
   'A manual habit has no target'
 );
 
-select throws_ok(
+select lives_ok(
   $$ insert into life_habit_days (habit_id, day) values ('e2000000-0000-0000-0000-000000000001', '2026-10-12') $$,
-  '23514',
-  'This habit is measured by Apple Health on the phone; it is not marked by hand',
-  'Measured habits are not marked by hand'
+  'Measured habits can be marked by hand too'
 );
 
 select lives_ok(

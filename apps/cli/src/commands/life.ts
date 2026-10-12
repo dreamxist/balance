@@ -287,13 +287,12 @@ export function renderHabits(
     lines.push(indent(ui.dim(`${pad('', nameWidth)}  ${DAY_LABELS.map((d) => pad(d, 4)).join('')}`)))
     for (const habit of habits) {
       const name = `${habit.emoji ? `${habit.emoji} ` : ''}${habit.name}`
-      // Sleep, wake and steps are measured by Apple Health on the phone and never stored here.
-      const cells =
-        habit.kind === 'manual'
-          ? DAY_LABELS.map((_, i) =>
-              pad(marked.has(`${habit.id}|${addDays(weekStart, i)}`) ? ui.positive('●') : ui.dim('·'), 4),
-            ).join('')
-          : ui.dim(`en el teléfono · ${habitRule(habit)}`)
+      // Sleep, wake and steps are measured by Apple Health on the phone and never stored
+      // here; what shows is only what was marked by hand.
+      const marks = DAY_LABELS.map((_, i) =>
+        pad(marked.has(`${habit.id}|${addDays(weekStart, i)}`) ? ui.positive('●') : ui.dim('·'), 4),
+      ).join('')
+      const cells = habit.kind === 'manual' ? marks : `${marks}${ui.dim(`Health · ${habitRule(habit)}`)}`
       const id = options.ids ? `  ${ui.dim(habit.id)}` : ''
       lines.push(indent(`${pad(name, nameWidth)}  ${cells}${id}`))
     }
