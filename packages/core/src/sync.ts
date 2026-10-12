@@ -34,6 +34,7 @@ export interface FintocSyncSummary {
   configured: boolean
   mode?: string
   link_status?: string
+  refresh_status?: string | null
   last_refreshed?: string | null
   since?: string
   fetched?: number

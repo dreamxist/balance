@@ -20,6 +20,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { mapMovement, stagedIdFor, type FintocMovement } from './mapper.ts'
 import { recordSyncOutcome } from '../_shared/sync-health.ts'
+import { nextWatermark, staleBankDataError } from './freshness.ts'
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -235,10 +236,12 @@ Deno.serve(async (req) => {
   if (failures.length === 0) {
     await supabase.from('sync_state').upsert({
       user_id: userId,
-      fintoc_watermark: runDate,
+      fintoc_watermark: nextWatermark(runDate, link),
       updated_at: new Date().toISOString(),
     })
-    await recordSyncOutcome(supabase, userId, 'fintoc', null)
+    const staleError = staleBankDataError(link, new Date())
+    if (staleError) console.error(`fintoc-sync: ${staleError}`)
+    await recordSyncOutcome(supabase, userId, 'fintoc', staleError)
   } else {
     for (const f of failures) console.error(`fintoc-sync: ${f}`)
     await recordSyncOutcome(supabase, userId, 'fintoc', `${failures.length} failure(s): ${failures[0]}`)
@@ -255,6 +258,7 @@ Deno.serve(async (req) => {
     configured: true,
     mode: isCronCall ? 'cron' : 'user',
     link_status: link.status,
+    refresh_status: link.refresh_status ?? null,
     last_refreshed: link.last_time_refreshed ?? null,
     since: effectiveSince,
     fetched,
