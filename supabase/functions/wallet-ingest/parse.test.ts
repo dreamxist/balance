@@ -8,6 +8,8 @@ Deno.test('parses the CLP formats Wallet shows', () => {
   assertEquals(parseClpAmount('$ 1.234.567'), 1234567)
   assertEquals(parseClpAmount('4.500,00'), 4500)
   assertEquals(parseClpAmount('990'), 990)
+  assertEquals(parseClpAmount('4500.00'), 4500)
+  assertEquals(parseClpAmount('4500.5'), 4500)
   assertEquals(parseClpAmount(15000), 15000)
 })
 

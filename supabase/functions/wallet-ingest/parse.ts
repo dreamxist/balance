@@ -17,8 +17,10 @@ export function parseClpAmount(raw: unknown): number | null {
   if (typeof raw !== 'string') return null
   const text = raw.trim()
   if (/us\$|usd|€|eur/i.test(text)) return null
-  // es-CL groups thousands with "." and writes cents after ","; CLP has no cents.
-  const digits = text.replace(/,\d{1,2}$/, '').replace(/[^\d]/g, '')
+  // Thousands are grouped in threes ("4.500"); a separator followed by one or
+  // two trailing digits is a decimal part ("4500.00", "4.500,00"). CLP has no
+  // cents, so the decimal part is dropped.
+  const digits = text.replace(/[.,]\d{1,2}$/, '').replace(/[^\d]/g, '')
   if (!digits) return null
   const amount = Number.parseInt(digits, 10)
   return amount > 0 ? amount : null
