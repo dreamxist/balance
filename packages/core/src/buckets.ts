@@ -22,7 +22,7 @@ export interface MonthlyBucketsOptions {
   entity?: Entity
 }
 
-function normalizeMonth(month: string): string {
+export function normalizeMonth(month: string): string {
   if (/^\d{4}-\d{2}$/.test(month)) return `${month}-01`
   if (/^\d{4}-\d{2}-\d{2}$/.test(month)) return month
   throw new Error(`Invalid month "${month}", expected YYYY-MM or YYYY-MM-DD`)
