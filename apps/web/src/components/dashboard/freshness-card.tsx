@@ -1,7 +1,9 @@
+import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import type { SyncSourceStatus } from '@balance/core'
 import { useRecentTransactions, useSyncStatus } from '@/hooks/use-freshness'
 import { SourceBadge } from '@/components/transactions/source-badge'
+import { CategorySheet, isCategorizable, useCategoryName, type CategorizableTx } from '@/components/transactions/category-sheet'
 import { Skeleton } from '@/components/ui/skeleton'
 import { SyncButton } from '@/components/sync-button'
 import { formatDateTime, formatHoursAgo, formatMoney, formatShortDate } from '@/lib/format'
@@ -21,8 +23,12 @@ export function FreshnessCard({ className }: { className?: string }) {
   const sync = useSyncStatus()
   const recent = useRecentTransactions(RECENT_LIMIT)
 
+  const [editing, setEditing] = useState<CategorizableTx | null>(null)
+  const categoryLabel = useCategoryName()
   const latest = recent.data?.[0]
-  const sources = sync.data ?? []
+  // Fintoc is out of the daily flow (Apple Pay + Gmail cover the cards); its
+  // stale link would only add noise here.
+  const sources = (sync.data ?? []).filter((s) => s.source !== 'fintoc')
   const needsAttention = sources.some((s) => s.status !== 'ok')
 
   return (
@@ -64,25 +70,39 @@ export function FreshnessCard({ className }: { className?: string }) {
         ) : (
           <ul className="divide-y divide-border">
             {recent.data?.map((tx) => (
-              <li key={tx.id} className="flex items-center gap-3 py-2">
-                <span className="w-12 shrink-0 text-xs tabular-nums text-muted-foreground">
-                  {formatShortDate(tx.date)}
-                </span>
-                <span className="min-w-0 flex-1 truncate text-sm">{tx.description}</span>
-                <SourceBadge metadata={tx.metadata} className="max-sm:hidden" />
-                <span
-                  className={cn(
-                    'shrink-0 font-mono text-sm tabular-nums',
-                    tx.type === 'income' || tx.type === 'refund'
-                      ? 'text-emerald-500'
-                      : tx.type === 'expense'
-                        ? 'text-foreground'
-                        : 'text-muted-foreground',
-                  )}
+              <li key={tx.id}>
+                <button
+                  type="button"
+                  disabled={!isCategorizable(tx.type)}
+                  onClick={() => setEditing(tx)}
+                  className="flex w-full items-center gap-3 py-2 text-left disabled:cursor-default"
                 >
-                  {tx.type === 'income' || tx.type === 'refund' ? '+' : tx.type === 'expense' ? '-' : ''}
-                  {formatMoney(tx.amount)}
-                </span>
+                  <span className="w-12 shrink-0 text-xs tabular-nums text-muted-foreground">
+                    {formatShortDate(tx.date)}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm">{tx.description}</span>
+                    {isCategorizable(tx.type) && (
+                      <span className={cn('block truncate text-xs', tx.category ? 'text-muted-foreground' : 'text-amber-600 dark:text-amber-400')}>
+                        {tx.category ? categoryLabel(tx.category) : 'Sin categoría · tocar para elegir'}
+                      </span>
+                    )}
+                  </span>
+                  <SourceBadge metadata={tx.metadata} className="max-sm:hidden" />
+                  <span
+                    className={cn(
+                      'shrink-0 font-mono text-sm tabular-nums',
+                      tx.type === 'income' || tx.type === 'refund'
+                        ? 'text-emerald-500'
+                        : tx.type === 'expense'
+                          ? 'text-foreground'
+                          : 'text-muted-foreground',
+                    )}
+                  >
+                    {tx.type === 'income' || tx.type === 'refund' ? '+' : tx.type === 'expense' ? '-' : ''}
+                    {formatMoney(tx.amount)}
+                  </span>
+                </button>
               </li>
             ))}
           </ul>
@@ -94,6 +114,7 @@ export function FreshnessCard({ className }: { className?: string }) {
           Ver todos los movimientos →
         </Link>
       </div>
+      <CategorySheet tx={editing} onClose={() => setEditing(null)} />
     </section>
   )
 }

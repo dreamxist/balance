@@ -1,10 +1,11 @@
-import { useEffect, useRef, useMemo } from 'react'
+import { useEffect, useRef, useMemo, useState } from 'react'
 import type { Transaction } from '@/hooks/use-transactions'
 import { useAccounts } from '@/hooks/use-accounts'
 import { formatMoney } from '@/lib/format'
 import { EmptyState } from '@/components/ui/empty-state'
 import { cn } from '@/lib/utils'
 import { SourceBadge } from './source-badge'
+import { CategorySheet, isCategorizable, useCategoryName, type CategorizableTx } from './category-sheet'
 
 const CATEGORY_COLORS: Record<string, string> = {
   necesidad: 'bg-blue-500',
@@ -75,6 +76,8 @@ export function TransactionList({
 }: TransactionListProps) {
   const sentinelRef = useRef<HTMLDivElement>(null)
   const accounts = useAccounts()
+  const [editing, setEditing] = useState<CategorizableTx | null>(null)
+  const categoryName = useCategoryName()
 
   const accountMap = useMemo(() => {
     const map = new Map<string, string>()
@@ -134,38 +137,43 @@ export function TransactionList({
             <div className="px-4 py-1.5 bg-muted/30">
               <span className="text-xs font-medium text-muted-foreground">{formatDate(date)}</span>
             </div>
-            {txns.map((tx) => (
-              <div key={tx.id} className="flex items-center h-11 px-4 gap-3 hover:bg-muted/50 transition-colors">
-                {/* Type icon */}
-                <span className={cn('w-4 text-center text-xs font-mono', getAmountStyle(tx.type, tx.amount))}>
-                  {getTypeIcon(tx.type)}
-                </span>
+            {txns.map((tx) => {
+              const editable = isCategorizable(tx.type)
+              return (
+                <button
+                  key={tx.id}
+                  type="button"
+                  disabled={!editable}
+                  onClick={() => setEditing(tx)}
+                  className="flex w-full items-center gap-3 px-4 py-2 text-left transition-colors hover:bg-muted/50 disabled:cursor-default disabled:hover:bg-transparent"
+                >
+                  <span className={cn('w-4 text-center text-xs font-mono', getAmountStyle(tx.type, tx.amount))}>
+                    {getTypeIcon(tx.type)}
+                  </span>
 
-                {/* Description */}
-                <span className="flex-1 text-sm truncate min-w-0">
-                  {tx.description || getCategoryLabel(tx.category)}
-                </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm">{tx.description || getCategoryLabel(tx.category)}</span>
+                    {editable && (
+                      <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <span className={cn('size-1.5 rounded-full', tx.category ? getCategoryColor(tx.category) : 'bg-amber-500')} />
+                        {tx.category ? categoryName(tx.category) : 'Sin categoría'}
+                      </span>
+                    )}
+                  </span>
 
-                <SourceBadge metadata={tx.metadata} />
+                  <SourceBadge metadata={tx.metadata} />
 
-                {/* Category pill */}
-                <span className="hidden sm:flex items-center gap-1.5 shrink-0">
-                  <span className={cn('size-1.5 rounded-full', getCategoryColor(tx.category))} />
-                  <span className="text-xs text-muted-foreground">{getCategoryLabel(tx.category)}</span>
-                </span>
+                  <span className="hidden md:block shrink-0 text-xs text-muted-foreground max-w-[6rem] truncate text-right">
+                    {accountMap.get(tx.account_id) ?? ''}
+                  </span>
 
-                {/* Account name */}
-                <span className="hidden md:block shrink-0 text-xs text-muted-foreground max-w-[6rem] truncate text-right">
-                  {accountMap.get(tx.account_id) ?? ''}
-                </span>
-
-                {/* Amount */}
-                <span className={cn('shrink-0 font-mono text-sm text-right min-w-[90px] tabular-nums', getAmountStyle(tx.type, tx.amount))}>
-                  {tx.type === 'income' || tx.type === 'refund' ? '+' : tx.type === 'expense' ? '-' : ''}
-                  {formatMoney(tx.amount)}
-                </span>
-              </div>
-            ))}
+                  <span className={cn('shrink-0 font-mono text-sm text-right min-w-[90px] tabular-nums', getAmountStyle(tx.type, tx.amount))}>
+                    {tx.type === 'income' || tx.type === 'refund' ? '+' : tx.type === 'expense' ? '-' : ''}
+                    {formatMoney(tx.amount)}
+                  </span>
+                </button>
+              )
+            })}
           </div>
         ))}
       </div>
@@ -175,6 +183,7 @@ export function TransactionList({
       )}
 
       <div ref={sentinelRef} className="h-4" />
+      <CategorySheet tx={editing} onClose={() => setEditing(null)} />
     </div>
   )
 }
