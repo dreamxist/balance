@@ -287,9 +287,13 @@ export function renderHabits(
     lines.push(indent(ui.dim(`${pad('', nameWidth)}  ${DAY_LABELS.map((d) => pad(d, 4)).join('')}`)))
     for (const habit of habits) {
       const name = `${habit.emoji ? `${habit.emoji} ` : ''}${habit.name}`
-      const cells = DAY_LABELS.map((_, i) =>
-        pad(marked.has(`${habit.id}|${addDays(weekStart, i)}`) ? ui.positive('●') : ui.dim('·'), 4),
-      ).join('')
+      // Sleep, wake and steps are measured by Apple Health on the phone and never stored here.
+      const cells =
+        habit.kind === 'manual'
+          ? DAY_LABELS.map((_, i) =>
+              pad(marked.has(`${habit.id}|${addDays(weekStart, i)}`) ? ui.positive('●') : ui.dim('·'), 4),
+            ).join('')
+          : ui.dim(`en el teléfono · ${habitRule(habit)}`)
       const id = options.ids ? `  ${ui.dim(habit.id)}` : ''
       lines.push(indent(`${pad(name, nameWidth)}  ${cells}${id}`))
     }
@@ -871,4 +875,18 @@ export function registerLifeCommand(program: Command): void {
   registerObjective(life)
   registerNotes(life)
   registerImport(life)
+}
+
+function habitRule(habit: LifeHabit): string {
+  const target = habit.target ?? 0
+  switch (habit.kind) {
+    case 'sleep':
+      return `${target} h o más`
+    case 'wake':
+      return `antes de las ${target}:00`
+    case 'steps':
+      return `${Number(target).toLocaleString('es-CL')} pasos`
+    default:
+      return ''
+  }
 }
