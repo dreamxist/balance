@@ -26,6 +26,7 @@ Status: **Beta — building in public.** Used daily by the author to migrate 9 y
 - **First-class CLI.** Add expenses, income, transfers, and debt payments without touching the browser.
 - **Web dashboard.** React + Vite SPA: net worth, cash flow, debts, recurring charges, snapshots.
 - **Multiple account types.** Cash, debit, credit cards, investments (Fintual integration), debts, receivables, properties.
+- **Real-time purchases from Apple Pay (recommended).** An iOS Shortcut posts every Wallet payment to an edge function; the card is mapped to its account and bank emails or Fintoc never book it twice. See `docs/setup-apple-pay.md`.
 - **Installment-aware debts.** Buy now, register later: full expense at purchase, monthly debt payments tracked separately.
 - **Recurring charges.** Automatic ones (subscriptions, debt installments) are auto-registered by an edge-function cron with month catch-up; manual ones are surfaced at reconciliation so you know what's still on you to pay.
 - **Snapshots & immutable history.** Transactions are never edited or deleted — corrections happen via undo / refund / adjustment.
