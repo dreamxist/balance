@@ -442,8 +442,8 @@ export function sourceForEmail(email: RawEmail): EmailSource | null {
     if (/pago de tarjeta de cr[eé]dito/i.test(subject)) return 'bice_pago_tc'
     return null
   }
-  if (from.includes('info@mercadopago.com')) {
-    return /transferencia fue enviada/i.test(subject) ? 'mp_transfer_out' : null
+  if (from.includes('info@mercadopago.com') || from.includes('info@mercadopago.cl')) {
+    return /transferencia fue enviada|enviamos tu transferencia/i.test(subject) ? 'mp_transfer_out' : null
   }
   if (from.includes('no-reply@tenpo.cl')) {
     return /comprobante de transferencia/i.test(subject) ? 'tenpo_transfer_in' : null
@@ -495,6 +495,7 @@ export function parseEmail(email: RawEmail): ParsedMovement | null | 'ignore' {
     'serviciodetransferencias@bancochile.cl',
     'reply@info.bice.cl',
     'info@mercadopago.com',
+    'info@mercadopago.cl',
     'no-reply@tenpo.cl',
     'contacto@bci.cl',
   ].some((s) => from.includes(s))
