@@ -494,8 +494,10 @@ export type Database = {
           emoji: string | null
           id: string
           is_archived: boolean
+          kind: string
           name: string
           position: number
+          target: number | null
           updated_at: string
           user_id: string
         }
@@ -504,8 +506,10 @@ export type Database = {
           emoji?: string | null
           id?: string
           is_archived?: boolean
+          kind?: string
           name: string
           position?: number
+          target?: number | null
           updated_at?: string
           user_id?: string
         }
@@ -514,8 +518,10 @@ export type Database = {
           emoji?: string | null
           id?: string
           is_archived?: boolean
+          kind?: string
           name?: string
           position?: number
+          target?: number | null
           updated_at?: string
           user_id?: string
         }
