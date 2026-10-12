@@ -8,6 +8,7 @@ const SAMPLE: MonthlyBuckets = {
   consumo: 70000,
   ahorro: 480000,
   por_categorizar: 40000,
+  comprometido: 0,
   disponible: 560000,
   month: '2026-03',
 }

@@ -24,6 +24,7 @@ export function renderBuckets(buckets: MonthlyBuckets, entity: string): string {
     ['Consumo', buckets.consumo],
     ['Ahorro', buckets.ahorro],
     ['Por categorizar', buckets.por_categorizar],
+    ['Comprometido', buckets.comprometido],
   ]
   const lines = [`Buckets ${buckets.month} (${entity})`, '']
   for (const [label, amount] of rows) {

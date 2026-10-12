@@ -9,6 +9,7 @@ function buckets(partial: Partial<MonthlyBuckets>): MonthlyBuckets {
     consumo: 0,
     ahorro: 0,
     por_categorizar: 0,
+    comprometido: 0,
     disponible: 0,
     month: '2026-03',
     ...partial,
@@ -26,8 +27,18 @@ describe('computeDistribution', () => {
       consumo: 25,
       ahorro: 15,
       por_categorizar: 0,
+      comprometido: 0,
       disponible: 10,
     })
+  })
+
+  it('shows recurring commitments as their own segment', () => {
+    const segments = computeDistribution(
+      buckets({ necesidades: 400, consumo: 300, ahorro: 100, comprometido: 100, disponible: 100 }),
+    )
+    const byKey = Object.fromEntries(segments.map((s) => [s.key, s.pct]))
+    expect(byKey.comprometido).toBe(10)
+    expect(byKey.disponible).toBe(10)
   })
 
   it('includes por_categorizar as its own segment, never inside consumo', () => {

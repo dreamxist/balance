@@ -1,5 +1,5 @@
 begin;
-select plan(20);
+select plan(22);
 
 -- ============================================================
 -- Setup: two users, accounts (incl. off-budget), fixed month
@@ -134,8 +134,8 @@ select is(
 
 select is(
   (select (get_monthly_buckets('2026-03-15'::date)->>'disponible')::bigint),
-  485000::bigint,
-  'disponible = income - (necesidades + consumo + por_categorizar); ahorro not subtracted'
+  5000::bigint,
+  'disponible = income - (necesidades + consumo + ahorro + por_categorizar); no commitments in a past month'
 );
 
 select is(
@@ -194,7 +194,7 @@ select is(
 select is(
   (select get_monthly_buckets('2020-01-15'::date)
      - 'month'),
-  '{"income": 0, "necesidades": 0, "consumo": 0, "ahorro": 0, "por_categorizar": 0, "disponible": 0}'::jsonb,
+  '{"income": 0, "necesidades": 0, "consumo": 0, "ahorro": 0, "por_categorizar": 0, "comprometido": 0, "disponible": 0}'::jsonb,
   'empty month returns all zeros'
 );
 
@@ -247,6 +247,29 @@ select is(
     where description like 'Zapatillas test%' and type = 'expense'),
   1::bigint,
   'installment purchase retains one parent expense for reconciliation'
+);
+
+-- ============================================================
+-- Current month: unpaid recurring charges are committed
+-- ============================================================
+insert into recurring_charges (user_id, name, amount, day_of_month, category, account_id, auto_charge)
+values
+  ('b1000000-0000-0000-0000-000000000001', 'Gimnasio test', 30000, 28,
+   'necesidad.suscripciones', 'b2000000-0000-0000-0000-000000000001', false),
+  ('b1000000-0000-0000-0000-000000000001', 'Pausado test', 99999, 28,
+   'necesidad.suscripciones', 'b2000000-0000-0000-0000-000000000001', false);
+update recurring_charges set is_active = false where name = 'Pausado test';
+
+select is(
+  (select (get_monthly_buckets(current_date)->>'comprometido')::bigint),
+  30000::bigint,
+  'current month commits active recurring charges not yet paid'
+);
+
+select is(
+  (select (get_monthly_buckets(current_date)->>'disponible')::bigint),
+  -30000::bigint,
+  'current month disponible subtracts the commitment'
 );
 
 -- ============================================================

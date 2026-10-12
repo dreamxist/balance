@@ -8,7 +8,8 @@ const SAMPLE: MonthlyBuckets = {
   consumo: 70000,
   ahorro: 480000,
   por_categorizar: 40000,
-  disponible: 560000,
+  comprometido: 50000,
+  disponible: 30000,
   month: '2026-03',
 }
 
@@ -37,7 +38,8 @@ describe('renderBuckets', () => {
     expect(out).toMatch(/Consumo.*70\.000/)
     expect(out).toMatch(/Ahorro.*480\.000/)
     expect(out).toMatch(/Por categorizar.*40\.000/)
-    expect(out).toMatch(/Disponible.*560\.000/)
+    expect(out).toMatch(/Comprometido.*50\.000/)
+    expect(out).toMatch(/Disponible.*30\.000/)
   })
 
   it('renders negative disponible with minus sign', () => {
