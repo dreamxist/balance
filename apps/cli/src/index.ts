@@ -5,12 +5,14 @@ import { registerAddCommand } from './commands/add'
 import { registerBalanceCommand } from './commands/balance'
 import { renderBanner } from './commands/banner'
 import { registerBucketsCommand } from './commands/buckets'
+import { registerBudgetCommand } from './commands/budget'
 import { registerCategoryCommand } from './commands/category'
 import { registerDebtCommand } from './commands/debt'
 import { registerExportCommand } from './commands/export'
 import { registerFintualCommand } from './commands/fintual'
 import { registerInboxCommand } from './commands/inbox'
 import { registerKeyCommand } from './commands/key'
+import { registerLifeCommand } from './commands/life'
 import { registerListCommand } from './commands/list'
 import { registerLoginCommand } from './commands/login'
 import { registerPatrimonioCommand } from './commands/patrimonio'
@@ -33,12 +35,14 @@ program
   .name('bal')
   .description('Balance CLI — personal finance assertion + reconciliation')
   .version(version)
+  .enablePositionalOptions()
 
 registerLoginCommand(program)
 registerKeyCommand(program)
 registerAddCommand(program)
 registerBalanceCommand(program)
 registerBucketsCommand(program)
+registerBudgetCommand(program)
 registerInboxCommand(program)
 registerListCommand(program)
 registerRulesCommand(program)
@@ -56,6 +60,7 @@ registerExportCommand(program)
 registerFintualCommand(program)
 registerSpaCommand(program)
 registerPatrimonioCommand(program)
+registerLifeCommand(program)
 
 async function main(): Promise<void> {
   if (process.argv.length <= 2) {
@@ -66,7 +71,12 @@ async function main(): Promise<void> {
 }
 
 main().catch((err: unknown) => {
-  const message = err instanceof Error ? err.message : String(err)
+  const message =
+    err instanceof Error
+      ? err.message
+      : typeof err === 'object' && err !== null && 'message' in err
+        ? String(err.message)
+        : String(err)
   process.stderr.write(`error: ${message}\n`)
   process.exit(1)
 })

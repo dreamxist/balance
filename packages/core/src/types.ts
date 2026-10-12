@@ -126,6 +126,36 @@ export type Database = {
         }
         Relationships: []
       }
+      bucket_budgets: {
+        Row: {
+          amount: number
+          bucket: string
+          created_at: string
+          entity: Database["public"]["Enums"]["entity_type"]
+          id: string
+          month: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          bucket: string
+          created_at?: string
+          entity?: Database["public"]["Enums"]["entity_type"]
+          id?: string
+          month: string
+          user_id?: string
+        }
+        Update: {
+          amount?: number
+          bucket?: string
+          created_at?: string
+          entity?: Database["public"]["Enums"]["entity_type"]
+          id?: string
+          month?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           entity: Database["public"]["Enums"]["entity_type"]
@@ -370,6 +400,478 @@ export type Database = {
           error_message?: string
           function_name?: string
           id?: never
+        }
+        Relationships: []
+      }
+      life_exercises: {
+        Row: {
+          block: string | null
+          change_note: string | null
+          created_at: string
+          id: string
+          name: string
+          position: number
+          prescription: string | null
+          purpose: string | null
+          session_id: string
+          user_id: string
+          valid_from: string
+          valid_to: string | null
+        }
+        Insert: {
+          block?: string | null
+          change_note?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          position?: number
+          prescription?: string | null
+          purpose?: string | null
+          session_id: string
+          user_id?: string
+          valid_from?: string
+          valid_to?: string | null
+        }
+        Update: {
+          block?: string | null
+          change_note?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          position?: number
+          prescription?: string | null
+          purpose?: string | null
+          session_id?: string
+          user_id?: string
+          valid_from?: string
+          valid_to?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "life_exercises_session_id_user_id_fkey"
+            columns: ["session_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "life_sessions"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
+      life_habit_days: {
+        Row: {
+          created_at: string
+          day: string
+          habit_id: string
+          note: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          day: string
+          habit_id: string
+          note?: string | null
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          day?: string
+          habit_id?: string
+          note?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "life_habit_days_habit_id_user_id_fkey"
+            columns: ["habit_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "life_habits"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
+      life_habits: {
+        Row: {
+          created_at: string
+          emoji: string | null
+          id: string
+          is_archived: boolean
+          name: string
+          position: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          emoji?: string | null
+          id?: string
+          is_archived?: boolean
+          name: string
+          position?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          emoji?: string | null
+          id?: string
+          is_archived?: boolean
+          name?: string
+          position?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      life_notes: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          is_archived: boolean
+          noted_on: string
+          topic: string | null
+          updated_at: string
+          user_id: string
+          vehicle: Database["public"]["Enums"]["life_vehicle"]
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          is_archived?: boolean
+          noted_on?: string
+          topic?: string | null
+          updated_at?: string
+          user_id?: string
+          vehicle: Database["public"]["Enums"]["life_vehicle"]
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          is_archived?: boolean
+          noted_on?: string
+          topic?: string | null
+          updated_at?: string
+          user_id?: string
+          vehicle?: Database["public"]["Enums"]["life_vehicle"]
+        }
+        Relationships: []
+      }
+      life_objective_steps: {
+        Row: {
+          created_at: string
+          done_on: string | null
+          id: string
+          note: string | null
+          objective_id: string
+          period: string | null
+          position: number
+          started_on: string | null
+          status: Database["public"]["Enums"]["life_step_status"]
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          done_on?: string | null
+          id?: string
+          note?: string | null
+          objective_id: string
+          period?: string | null
+          position?: number
+          started_on?: string | null
+          status?: Database["public"]["Enums"]["life_step_status"]
+          title: string
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          done_on?: string | null
+          id?: string
+          note?: string | null
+          objective_id?: string
+          period?: string | null
+          position?: number
+          started_on?: string | null
+          status?: Database["public"]["Enums"]["life_step_status"]
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "life_objective_steps_objective_id_user_id_fkey"
+            columns: ["objective_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "life_objectives"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
+      life_objectives: {
+        Row: {
+          closed_on: string | null
+          created_at: string
+          focus: string | null
+          id: string
+          linear_project_id: string | null
+          position: number
+          status: Database["public"]["Enums"]["life_objective_status"]
+          status_note: string | null
+          title: string
+          updated_at: string
+          user_id: string
+          vehicle: Database["public"]["Enums"]["life_vehicle"]
+          year: number
+        }
+        Insert: {
+          closed_on?: string | null
+          created_at?: string
+          focus?: string | null
+          id?: string
+          linear_project_id?: string | null
+          position?: number
+          status?: Database["public"]["Enums"]["life_objective_status"]
+          status_note?: string | null
+          title: string
+          updated_at?: string
+          user_id?: string
+          vehicle: Database["public"]["Enums"]["life_vehicle"]
+          year?: number
+        }
+        Update: {
+          closed_on?: string | null
+          created_at?: string
+          focus?: string | null
+          id?: string
+          linear_project_id?: string | null
+          position?: number
+          status?: Database["public"]["Enums"]["life_objective_status"]
+          status_note?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+          vehicle?: Database["public"]["Enums"]["life_vehicle"]
+          year?: number
+        }
+        Relationships: []
+      }
+      life_routine_slots: {
+        Row: {
+          change_note: string | null
+          created_at: string
+          id: string
+          position: number
+          session_id: string | null
+          starts_at: string | null
+          title: string
+          user_id: string
+          valid_from: string
+          valid_to: string | null
+          vehicle: Database["public"]["Enums"]["life_vehicle"]
+          weekday: number
+        }
+        Insert: {
+          change_note?: string | null
+          created_at?: string
+          id?: string
+          position?: number
+          session_id?: string | null
+          starts_at?: string | null
+          title: string
+          user_id?: string
+          valid_from?: string
+          valid_to?: string | null
+          vehicle: Database["public"]["Enums"]["life_vehicle"]
+          weekday: number
+        }
+        Update: {
+          change_note?: string | null
+          created_at?: string
+          id?: string
+          position?: number
+          session_id?: string | null
+          starts_at?: string | null
+          title?: string
+          user_id?: string
+          valid_from?: string
+          valid_to?: string | null
+          vehicle?: Database["public"]["Enums"]["life_vehicle"]
+          weekday?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "life_routine_slots_session_id_user_id_fkey"
+            columns: ["session_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "life_sessions"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
+      life_sessions: {
+        Row: {
+          created_at: string
+          emoji: string | null
+          focus: string | null
+          id: string
+          is_archived: boolean
+          name: string
+          position: number
+          updated_at: string
+          user_id: string
+          vehicle: Database["public"]["Enums"]["life_vehicle"]
+        }
+        Insert: {
+          created_at?: string
+          emoji?: string | null
+          focus?: string | null
+          id?: string
+          is_archived?: boolean
+          name: string
+          position?: number
+          updated_at?: string
+          user_id?: string
+          vehicle: Database["public"]["Enums"]["life_vehicle"]
+        }
+        Update: {
+          created_at?: string
+          emoji?: string | null
+          focus?: string | null
+          id?: string
+          is_archived?: boolean
+          name?: string
+          position?: number
+          updated_at?: string
+          user_id?: string
+          vehicle?: Database["public"]["Enums"]["life_vehicle"]
+        }
+        Relationships: []
+      }
+      life_week_notes: {
+        Row: {
+          body: string | null
+          risks: string[]
+          updated_at: string
+          user_id: string
+          vehicle: Database["public"]["Enums"]["life_vehicle"]
+          week_id: string
+          wins: string[]
+        }
+        Insert: {
+          body?: string | null
+          risks?: string[]
+          updated_at?: string
+          user_id?: string
+          vehicle: Database["public"]["Enums"]["life_vehicle"]
+          week_id: string
+          wins?: string[]
+        }
+        Update: {
+          body?: string | null
+          risks?: string[]
+          updated_at?: string
+          user_id?: string
+          vehicle?: Database["public"]["Enums"]["life_vehicle"]
+          week_id?: string
+          wins?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "life_week_notes_week_id_user_id_fkey"
+            columns: ["week_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "life_weeks"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
+      life_week_slots: {
+        Row: {
+          created_at: string
+          day: string
+          id: string
+          note: string | null
+          position: number
+          session_id: string | null
+          starts_at: string | null
+          title: string
+          updated_at: string
+          user_id: string
+          vehicle: Database["public"]["Enums"]["life_vehicle"]
+          week_id: string
+        }
+        Insert: {
+          created_at?: string
+          day: string
+          id?: string
+          note?: string | null
+          position?: number
+          session_id?: string | null
+          starts_at?: string | null
+          title: string
+          updated_at?: string
+          user_id?: string
+          vehicle: Database["public"]["Enums"]["life_vehicle"]
+          week_id: string
+        }
+        Update: {
+          created_at?: string
+          day?: string
+          id?: string
+          note?: string | null
+          position?: number
+          session_id?: string | null
+          starts_at?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+          vehicle?: Database["public"]["Enums"]["life_vehicle"]
+          week_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "life_week_slots_session_id_user_id_fkey"
+            columns: ["session_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "life_sessions"
+            referencedColumns: ["id", "user_id"]
+          },
+          {
+            foreignKeyName: "life_week_slots_week_id_user_id_fkey"
+            columns: ["week_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "life_weeks"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
+      life_weeks: {
+        Row: {
+          created_at: string
+          id: string
+          intent: string | null
+          updated_at: string
+          user_id: string
+          week_start: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          intent?: string | null
+          updated_at?: string
+          user_id?: string
+          week_start: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          intent?: string | null
+          updated_at?: string
+          user_id?: string
+          week_start?: string
         }
         Relationships: []
       }
@@ -971,7 +1473,23 @@ export type Database = {
         }
         Returns: Json
       }
+      _bucket_movements: {
+        Args: {
+          p_end: string
+          p_entity: Database["public"]["Enums"]["entity_type"]
+          p_start: string
+        }
+        Returns: {
+          bucket: string
+          day: string
+          delta: number
+        }[]
+      }
       _bucket_root: { Args: { p_category: string }; Returns: string }
+      _counterparty_is_owner: {
+        Args: { p_counterparty: string; p_user_id: string }
+        Returns: boolean
+      }
       _create_debt: {
         Args: {
           p_account_id: string
@@ -1073,6 +1591,31 @@ export type Database = {
       }
       _update_account_balance: {
         Args: { p_account_id: string; p_delta: number }
+        Returns: {
+          balance: number
+          created_at: string
+          credit_limit: number | null
+          currency: string
+          entity: Database["public"]["Enums"]["entity_type"]
+          id: string
+          is_archived: boolean
+          metadata: Json | null
+          name: string
+          on_budget: boolean
+          subtype: Database["public"]["Enums"]["account_subtype"]
+          type: Database["public"]["Enums"]["account_type"]
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "accounts"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      _wallet_account: {
+        Args: { p_card: string; p_user_id: string }
         Returns: {
           balance: number
           created_at: string
@@ -1282,6 +1825,13 @@ export type Database = {
         Returns: Json
       }
       delete_category: { Args: { p_category_id: string }; Returns: undefined }
+      get_bucket_budgets: {
+        Args: {
+          p_entity?: Database["public"]["Enums"]["entity_type"]
+          p_month?: string
+        }
+        Returns: Json
+      }
       get_f29_summary: {
         Args: { p_month: number; p_year: number }
         Returns: Json
@@ -1328,6 +1878,122 @@ export type Database = {
         }
       }
       get_spa_annual_summary: { Args: { p_year: number }; Returns: Json }
+      ingest_wallet_payment: {
+        Args: {
+          p_amount: number
+          p_card: string
+          p_merchant: string
+          p_occurred_at?: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      life_close_objective: {
+        Args: {
+          p_note?: string
+          p_objective_id: string
+          p_on?: string
+          p_status: Database["public"]["Enums"]["life_objective_status"]
+        }
+        Returns: {
+          closed_on: string | null
+          created_at: string
+          focus: string | null
+          id: string
+          linear_project_id: string | null
+          position: number
+          status: Database["public"]["Enums"]["life_objective_status"]
+          status_note: string | null
+          title: string
+          updated_at: string
+          user_id: string
+          vehicle: Database["public"]["Enums"]["life_vehicle"]
+          year: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "life_objectives"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      life_open_week: {
+        Args: { p_day?: string }
+        Returns: {
+          created_at: string
+          id: string
+          intent: string | null
+          updated_at: string
+          user_id: string
+          week_start: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "life_weeks"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      life_replace_exercise: {
+        Args: {
+          p_exercise_id: string
+          p_from?: string
+          p_name: string
+          p_note?: string
+          p_prescription?: string
+          p_purpose?: string
+        }
+        Returns: {
+          block: string | null
+          change_note: string | null
+          created_at: string
+          id: string
+          name: string
+          position: number
+          prescription: string | null
+          purpose: string | null
+          session_id: string
+          user_id: string
+          valid_from: string
+          valid_to: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "life_exercises"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      life_replace_slot: {
+        Args: {
+          p_from?: string
+          p_note?: string
+          p_session_id?: string
+          p_slot_id: string
+          p_starts_at?: string
+          p_title: string
+        }
+        Returns: {
+          change_note: string | null
+          created_at: string
+          id: string
+          position: number
+          session_id: string | null
+          starts_at: string | null
+          title: string
+          user_id: string
+          valid_from: string
+          valid_to: string | null
+          vehicle: Database["public"]["Enums"]["life_vehicle"]
+          weekday: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "life_routine_slots"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       link_transaction_to_invoice: {
         Args: {
           p_invoice_id: string
@@ -1357,6 +2023,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      link_wallet_card: {
+        Args: { p_account_id: string; p_card: string }
+        Returns: Json
       }
       mark_f29_declared: {
         Args: {
@@ -1529,6 +2199,9 @@ export type Database = {
       entity_type: "personal" | "spa"
       invoice_direction: "emitida" | "recibida"
       invoice_status: "draft" | "sent" | "paid" | "partially_paid" | "overdue"
+      life_objective_status: "active" | "done" | "dropped"
+      life_step_status: "done" | "current" | "pending" | "paused"
+      life_vehicle: "sport" | "work" | "personal"
       snapshot_status: "balanced" | "unbalanced"
       transaction_type:
         | "income"
@@ -1686,6 +2359,9 @@ export const Constants = {
       entity_type: ["personal", "spa"],
       invoice_direction: ["emitida", "recibida"],
       invoice_status: ["draft", "sent", "paid", "partially_paid", "overdue"],
+      life_objective_status: ["active", "done", "dropped"],
+      life_step_status: ["done", "current", "pending", "paused"],
+      life_vehicle: ["sport", "work", "personal"],
       snapshot_status: ["balanced", "unbalanced"],
       transaction_type: [
         "income",
