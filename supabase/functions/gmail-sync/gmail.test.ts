@@ -12,6 +12,7 @@ Deno.test('buildGmailQuery includes every known sender and the watermark', () =>
   assertEquals(q.includes('from:serviciodetransferencias@bancochile.cl'), true)
   assertEquals(q.includes('from:reply@info.bice.cl'), true)
   assertEquals(q.includes('from:info@mercadopago.com'), true)
+  assertEquals(q.includes('from:info@mercadopago.cl'), true)
   assertEquals(q.includes('from:no-reply@tenpo.cl'), true)
   assertEquals(q.includes('from:contacto@bci.cl'), true)
   assertEquals(q.endsWith('after:1751900000'), true)

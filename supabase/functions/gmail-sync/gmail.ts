@@ -7,6 +7,7 @@ export const KNOWN_SENDERS = [
   'serviciodetransferencias@bancochile.cl',
   'reply@info.bice.cl',
   'info@mercadopago.com',
+  'info@mercadopago.cl',
   'no-reply@tenpo.cl',
   'contacto@bci.cl',
 ] as const

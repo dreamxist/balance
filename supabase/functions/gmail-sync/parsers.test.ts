@@ -222,6 +222,19 @@ Deno.test('mp_transfer_out parses sent transfer', () => {
   assertEquals(p.dest_hint, '1122334455')
 })
 
+Deno.test('mp_transfer_out parses the .cl sender and current subject', () => {
+  const p = parsed(email({
+    from: 'Mercado Pago <info@mercadopago.cl>',
+    subject: '¡Enviamos tu transferencia!',
+    body: `<p>Ya enviamos tu transferencia de $ 100.000 Datos del beneficiario
+      Nombre y apellido: ANA MARIA REYES Entidad: Banco de Chile
+      Número de cuenta: 001122334455</p>`,
+  }))
+  assertEquals(p.source, 'mp_transfer_out')
+  assertEquals(p.amount, 100000)
+  assertEquals(p.dest_hint, '1122334455')
+})
+
 Deno.test('tenpo_transfer_in hints the destination account', () => {
   const p = parsed(email({
     from: 'no-reply@tenpo.cl',
