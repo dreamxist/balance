@@ -80,3 +80,5 @@ export { getSpaDashboard, getSpaInvoices, createSpaInvoice, getSpaExpenses, getS
 export { getSpaEmitidas, getSpaRecibidas, createSpaInvoiceV2, markSpaInvoicePaid, getF29Summary, getSpaAnnualSummary } from './spa'
 export { uploadFacturaFile, getFacturaSignedUrl, getSpaReimbursables, linkTransactionToInvoice, markF29Declared, resolveF29Values } from './spa'
 export type { SpaDashboardData, SpaInvoice, SpaInvoiceRow, F29Summary, F29Declaration, AnnualSummary, CreateInvoiceInput, DocumentType, InvoiceDirection, ReimbursableRow, MarkF29DeclaredInput, F29Values, ResolvedF29 } from './spa'
+export { getUnmappedWalletCards, linkWalletCard } from './wallet'
+export type { LinkWalletCardResult, UnmappedWalletCard } from './wallet'

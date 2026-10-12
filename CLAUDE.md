@@ -285,6 +285,7 @@ App de finanzas personales que unifica la gestion financiera de una persona y un
 - Edge Function `daily-charges`: cron for auto-registering recurring charges + debt payments
 - Edge Function `gmail-sync`: cron 2×/day, bank emails → staging → transactions (docs/setup-gmail.md)
 - Edge Function `fintoc-sync` (optional): cron 2×/day, Fintoc Movements API → staging → transactions (docs/setup-fintoc.md)
+- Edge Function `wallet-ingest` (optional): iOS Shortcut on each Apple Pay payment → `ingest_wallet_payment` (card mapped to account via `accounts.metadata.wallet_cards`, deduplicated against Gmail/Fintoc)
 <!-- GSD:architecture-end -->
 
 <!-- GSD:workflow-start source:GSD defaults -->

@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils'
 const LABELS: Record<Exclude<TransactionSource, 'manual'>, string> = {
   fintoc: 'Fintoc',
   gmail: 'Gmail',
+  apple_pay: 'Apple Pay',
   recurring: 'Recurrente',
 }
 

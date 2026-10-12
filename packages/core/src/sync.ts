@@ -136,14 +136,18 @@ export function evaluateSyncHealth(
   return issues
 }
 
-export type TransactionSource = 'fintoc' | 'gmail' | 'recurring' | 'manual'
+export type TransactionSource = 'fintoc' | 'gmail' | 'apple_pay' | 'recurring' | 'manual'
 
 /** Where a transaction came from, read from the metadata ingestion writes. */
 export function transactionSource(metadata: unknown): TransactionSource {
   if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) return 'manual'
   const meta = metadata as Record<string, unknown>
   const stagedId = meta.gmail_message_id
-  if (typeof stagedId === 'string') return stagedId.startsWith('fintoc:') ? 'fintoc' : 'gmail'
+  if (typeof stagedId === 'string') {
+    if (stagedId.startsWith('fintoc:')) return 'fintoc'
+    if (stagedId.startsWith('applepay:')) return 'apple_pay'
+    return 'gmail'
+  }
   if (typeof meta.recurring_charge_id === 'string') return 'recurring'
   return 'manual'
 }
