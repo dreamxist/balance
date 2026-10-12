@@ -984,7 +984,7 @@ BUCKETS:
   canónico para skills y sesiones.
 
 GAPS ACEPTADOS (no generan correo):
-  - Compras con TC BICE ****NNNN
+  - Compras con TC BICE ****NNNN → cubiertas por Apple Pay si se pagan con Wallet (Flujo 15)
   - Compras con débito → cubiertas por fintoc-sync si está configurado (Flujo 14)
   → lo demás se detecta al cuadrar contra el estado de cuenta / cartola
 ```
@@ -1013,4 +1013,32 @@ SI UNA FUENTE SE CAE:
   `bal balance` muestra el bloque SYNC (última corrida con error o > 36 h sin
   éxito) con la causa. Gmail: repetir docs/setup-gmail.md con un client
   nuevo. Fintoc: reconectar el Link desde el widget de Fintoc.
+```
+
+---
+
+## Flujo 15: Compras en tiempo real con Apple Pay (wallet-ingest, recomendado)
+
+```
+Fuente por defecto. Cada pago con Wallet (iPhone o Apple Watch):
+
+  1. El Atajo de iOS (automatización «Transacción») hace POST a wallet-ingest
+     con { card, merchant, amount } y la API key en x-api-key
+  2. ingest_wallet_payment asigna la tarjeta a una cuenta:
+     accounts.metadata.wallet_cards → si no, banco + débito/crédito
+     (nunca la internacional) → si no resuelve, queda pendiente en
+     email_movements (status error) y no se registra nada
+  3. Si el banco ya registró la compra (misma cuenta y monto, −1/+3 días)
+     → se vincula a ese gasto; si no → gasto nuevo con reglas de categoría
+  4. Cuando después llega el correo (gmail-sync) o el movimiento de Fintoc
+     de esa compra, promote_email_movements reclama el gasto de Apple Pay
+     en vez de insertar otro
+
+TARJETAS SIN CUENTA: `bal wallet` las lista; `bal wallet link "<tarjeta>"
+--account "<cuenta>"` las asigna y registra sus pagos pendientes.
+
+NO CUBRE: compras online con el número de la tarjeta, tarjeta física y
+suscripciones → se cuadran con la cartola. La automatización de iOS puede
+no dispararse o dispararse con pagos rechazados: el cuadre lo corrige.
+Setup: docs/setup-apple-pay.md
 ```
