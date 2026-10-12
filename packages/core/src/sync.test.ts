@@ -130,6 +130,7 @@ describe('transactionSource', () => {
   it('classifies ingestion and recurring metadata', () => {
     expect(transactionSource({ gmail_message_id: 'fintoc:mov_1', source: 'bancochile_cargo' })).toBe('fintoc')
     expect(transactionSource({ gmail_message_id: '18f2a', source: 'bice_compra' })).toBe('gmail')
+    expect(transactionSource({ gmail_message_id: 'applepay:9f2c', source: 'apple_pay' })).toBe('apple_pay')
     expect(transactionSource({ recurring_charge_id: 'abc' })).toBe('recurring')
     expect(transactionSource({})).toBe('manual')
     expect(transactionSource(null)).toBe('manual')

@@ -22,6 +22,7 @@ import { registerSyncCommand } from './commands/sync'
 import { registerSpaCommand } from './commands/spa'
 import { registerTransferCommand } from './commands/transfer'
 import { registerUndoCommand } from './commands/undo'
+import { registerWalletCommand } from './commands/wallet'
 
 const require = createRequire(import.meta.url)
 const { version } = require('../package.json') as { version: string }
@@ -42,6 +43,7 @@ registerInboxCommand(program)
 registerListCommand(program)
 registerRulesCommand(program)
 registerSyncCommand(program)
+registerWalletCommand(program)
 registerTransferCommand(program)
 registerUndoCommand(program)
 registerAccountCommand(program)
