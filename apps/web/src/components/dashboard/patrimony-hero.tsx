@@ -17,6 +17,7 @@ const SEGMENT_COLORS = {
   consumo: 'bg-orange-500',
   ahorro: 'bg-violet-500',
   por_categorizar: 'bg-zinc-400',
+  comprometido: 'bg-amber-400',
   disponible: 'bg-emerald-500',
 } as const
 
@@ -25,6 +26,7 @@ const SEGMENT_LABELS = {
   consumo: 'Consumo',
   ahorro: 'Ahorro',
   por_categorizar: 'Por categorizar',
+  comprometido: 'Comprometido',
   disponible: 'Disponible',
 } as const
 

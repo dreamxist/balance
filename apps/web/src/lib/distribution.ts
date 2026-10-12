@@ -5,6 +5,7 @@ export type DistributionKey =
   | 'consumo'
   | 'ahorro'
   | 'por_categorizar'
+  | 'comprometido'
   | 'disponible'
 
 export interface DistributionSegment {
@@ -15,13 +16,13 @@ export interface DistributionSegment {
 
 /**
  * Bar segments for the monthly distribution. Percentages are over
- * gastado + disponible (when positive); a negative disponible renders
- * as amount-only (pct 0) and does not shrink the other segments.
+ * gastado + comprometido + disponible (when positive); a negative disponible
+ * renders as amount-only (pct 0) and does not shrink the other segments.
  */
 export function computeDistribution(buckets: MonthlyBuckets): DistributionSegment[] {
   const gastado =
     buckets.necesidades + buckets.consumo + buckets.ahorro + buckets.por_categorizar
-  const total = gastado + Math.max(buckets.disponible, 0)
+  const total = gastado + buckets.comprometido + Math.max(buckets.disponible, 0)
 
   function pct(amount: number): number {
     return total > 0 ? Math.round((amount / total) * 100) : 0
@@ -32,6 +33,7 @@ export function computeDistribution(buckets: MonthlyBuckets): DistributionSegmen
     { key: 'consumo', amount: buckets.consumo, pct: pct(buckets.consumo) },
     { key: 'ahorro', amount: buckets.ahorro, pct: pct(buckets.ahorro) },
     { key: 'por_categorizar', amount: buckets.por_categorizar, pct: pct(buckets.por_categorizar) },
+    { key: 'comprometido', amount: buckets.comprometido, pct: pct(buckets.comprometido) },
     { key: 'disponible', amount: buckets.disponible, pct: pct(Math.max(buckets.disponible, 0)) },
   ]
 }

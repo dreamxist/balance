@@ -10,6 +10,8 @@ export interface MonthlyBuckets {
   consumo: number
   ahorro: number
   por_categorizar: number
+  /** Recurring charges still to be paid this month (current month only). */
+  comprometido: number
   disponible: number
   month: string
 }
