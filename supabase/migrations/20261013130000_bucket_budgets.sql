@@ -1,6 +1,6 @@
 -- Monthly budget per bucket (necesidades, consumo, ahorro) and how each one
 -- moves through the month. The amounts lived in the vault's finanzas.md; here
--- they become data so Quark and `bal` can show what is left per bucket.
+-- they become data so the app and `bal` can show what is left per bucket.
 --
 -- A budget row applies from its month on until a later month sets a new one,
 -- so the budget is set once and only touched when it changes.

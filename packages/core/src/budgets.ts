@@ -2,9 +2,22 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from './types'
 import type { Entity } from './recurring'
 import { normalizeMonth } from './buckets'
-import type { BudgetBucket } from './life'
 
 type TypedClient = SupabaseClient<Database>
+
+export const BUDGET_BUCKETS = ['necesidades', 'consumo', 'ahorro'] as const
+export type BudgetBucket = (typeof BUDGET_BUCKETS)[number]
+
+export function isBudgetBucket(value: unknown): value is BudgetBucket {
+  return typeof value === 'string' && (BUDGET_BUCKETS as readonly string[]).includes(value)
+}
+
+export function todayIso(now: Date = new Date()): string {
+  const y = now.getFullYear()
+  const m = String(now.getMonth() + 1).padStart(2, '0')
+  const d = String(now.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
 
 export interface BucketBudgetDay {
   date: string

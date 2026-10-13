@@ -110,31 +110,6 @@ due automatic charges and asks which manual ones you have paid.
 | `bal budget [--month YYYY-MM] [--entity personal\|spa]` | Budget, spent and remaining for `necesidades`, `consumo` and `ahorro` (`get_bucket_budgets`). |
 | `bal budget set <bucket> <amount> [--month YYYY-MM] [--entity]` | Set a bucket's budget from that month on (default: current month). |
 
-### Life planning
-
-Sport, work and personal: a week opened from the typical week, the routine, habits, objectives and notes. Personal is never measured.
-
-| Command | Description |
-| --- | --- |
-| `bal life week [--date] [--ids]` | Week table (day × sport/work/personal) and its notes. Opens the week from the typical week if needed. |
-| `bal life slot add --vehicle <v> --title <t> [--date] [--time HH:MM] [--session] [--note]` | Add a block to a concrete week. |
-| `bal life slot set <id> [--title\|--date\|--vehicle\|--time\|--session\|--note]` / `bal life slot rm <id>` | Edit or remove a week block (`none` clears a field). |
-| `bal life note <vehicle> [--date] [--body] [--win ...] [--risk ...]` | The week's note for a vehicle; repeated `--win`/`--risk` replace the list. |
-| `bal life routine [--ids]` | Typical week plus sessions with their current exercises. |
-| `bal life routine set <slot-id> [--title\|--session\|--time\|--note] [--from]` | Change a typical-week block from a date on (versioned). |
-| `bal life exercise set <id> [--name\|--prescription\|--purpose\|--note] [--from]` | Change an exercise from a date on; the old version keeps its reason. |
-| `bal life exercise add <session> --name <n> [--block\|--prescription\|--purpose\|--position\|--from]` | Add an exercise to a session (by name or id). |
-| `bal life habit list\|add\|archive\|mark\|unmark [--date]` | Habits (max four active) and the days marked this week. No streaks. |
-| `bal life objective list [--year\|--vehicle\|--status\|--ids]` | Objectives with their roadmap steps. |
-| `bal life objective add --vehicle <v> --title <t> [--year\|--focus\|--linear-project]` | Add an objective. |
-| `bal life objective step add <objective> <title> [--period\|--status\|--done-on]` | Add a roadmap step. |
-| `bal life objective step set <step-id> <done\|current\|pending\|paused> [--on]` | Set a step's status; `done` dates it (today by default), any other status clears the date. |
-| `bal life objective close <objective> <done\|dropped\|active> [--note] [--on]` | Close (or reopen) an objective. |
-| `bal life notes add <vehicle> <body> [--topic] [--date]` / `bal life notes list [--vehicle\|--topic\|--limit]` | Follow-up notes per vehicle. |
-| `bal life import <file.json> [--from YYYY-MM-DD]` | Load a seed (habits, sessions, typical week, objectives, budgets, notes). Refuses if sessions or objectives already exist. |
-
-Vehicles: `sport` (`deporte`), `work` (`trabajo`), `personal`.
-
 ### Snapshots & export
 
 | Command | Description |
