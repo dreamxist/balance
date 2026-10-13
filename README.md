@@ -8,7 +8,7 @@ Balance is a personal-finance app for developers who want full control over thei
 
 This is not a YNAB or Mint replacement. It is a self-hosted, code-first alternative for people who like spreadsheets, the command line, and the idea that their financial system should be auditable end to end.
 
-Status: **Beta — building in public.** Used daily by the author to migrate 9 years of Excel history. Schema is stable; UI iterating.
+Status: **Frozen — maintenance only.** Used daily by the author, who migrated 9 years of Excel history into it. Schema is stable; the repo only takes fixes.
 
 ---
 

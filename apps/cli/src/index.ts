@@ -12,7 +12,6 @@ import { registerExportCommand } from './commands/export'
 import { registerFintualCommand } from './commands/fintual'
 import { registerInboxCommand } from './commands/inbox'
 import { registerKeyCommand } from './commands/key'
-import { registerLifeCommand } from './commands/life'
 import { registerListCommand } from './commands/list'
 import { registerLoginCommand } from './commands/login'
 import { registerPatrimonioCommand } from './commands/patrimonio'
@@ -60,7 +59,6 @@ registerExportCommand(program)
 registerFintualCommand(program)
 registerSpaCommand(program)
 registerPatrimonioCommand(program)
-registerLifeCommand(program)
 
 async function main(): Promise<void> {
   if (process.argv.length <= 2) {
